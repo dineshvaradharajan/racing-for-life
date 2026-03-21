@@ -3614,6 +3614,22 @@ function updateMinimap() {
     ctx.closePath();
     ctx.stroke();
 
+    // Finish line marker (checkered flag icon)
+    const fp = trackPoints[0];
+    const fmx = 90 + fp.x * 0.3;
+    const fmy = 90 + fp.z * 0.3;
+    // Draw a small checkered flag
+    const fs = 4;
+    for (let cx = -1; cx <= 1; cx++) {
+        for (let cy = -1; cy <= 1; cy++) {
+            ctx.fillStyle = (cx + cy) % 2 === 0 ? '#fff' : '#000';
+            ctx.fillRect(fmx + cx * fs - fs, fmy + cy * fs - fs, fs, fs);
+        }
+    }
+    ctx.strokeStyle = '#ff6b35';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(fmx - fs - fs, fmy - fs - fs, fs * 3, fs * 3);
+
     // AI dots
     aiCars.forEach(ai => {
         const p = getTrackPointAt(trackPoints, ai.t);
