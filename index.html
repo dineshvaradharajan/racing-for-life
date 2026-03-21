@@ -435,25 +435,31 @@
             background: rgba(20,20,40,0.95);
             border: 1px solid rgba(255,107,53,0.3);
             border-radius: 16px;
-            padding: 40px;
-            max-width: 400px;
+            padding: 30px;
+            max-width: 360px;
             width: 90%;
             text-align: center;
         }
         .login-box h2 {
             color: #ff6b35;
-            font-size: 28px;
-            margin-bottom: 8px;
+            font-size: 26px;
+            margin-bottom: 6px;
         }
         .login-box p {
             color: #888;
-            margin-bottom: 24px;
-            font-size: 14px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+        .login-box .menu-btn {
+            padding: 12px 40px;
+            font-size: 17px;
+            width: 100%;
+            margin: 4px 0;
         }
         .login-input {
             width: 100%;
-            padding: 14px 16px;
-            margin-bottom: 12px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
             border: 1px solid rgba(255,255,255,0.15);
             border-radius: 10px;
             background: rgba(255,255,255,0.08);
@@ -1105,6 +1111,11 @@ let carHeading = 0;       // radians - direction the car faces
 let carVelX = 0, carVelZ = 0;  // world velocity
 let carSteerAngle = 0;    // current wheel steer angle
 let drifting = false;
+// Suspension state
+let suspBounce = 0;    // vertical body offset
+let suspVel = 0;       // vertical velocity
+let suspPitch = 0;     // forward/back tilt (braking/accel)
+let suspRoll = 0;      // side tilt (turning)
 
 function generateEnvMap(track) {
     // Procedural environment cube map for reflections
@@ -1304,6 +1315,7 @@ function initScene() {
     carVelZ = 0;
     carSteerAngle = 0;
     drifting = false;
+    suspBounce = 0; suspVel = 0; suspPitch = 0; suspRoll = 0;
 
     clock = new THREE.Clock();
 }
@@ -3116,12 +3128,41 @@ function updatePlayer(dt) {
     const displaySpeed = Math.sqrt(carVelX * carVelX + carVelZ * carVelZ) * 3.6; // units to km/h
     if (displaySpeed > topSpeed) topSpeed = displaySpeed;
 
+    // ── Suspension physics ──
+    // Spring-damper system for body bounce
+    const stiffness = 60;   // spring stiffness
+    const damping = 8;      // damper
+    const targetY = 0;      // resting position
+
+    // Bumps from speed + track roughness
+    const bumpForce = Math.sin(raceTime * 15 + carX * 0.5) * absSpeed * 0.003
+                    + Math.sin(raceTime * 23 + carZ * 0.3) * absSpeed * 0.002;
+
+    // Acceleration/braking pitch force
+    let accelForce2 = 0;
+    if (keys['w'] || keys['arrowup']) accelForce2 = -0.02 * Math.min(absSpeed / 30, 1);
+    else if (keys['s'] || keys['arrowdown']) accelForce2 = 0.04 * Math.min(absSpeed / 10, 1);
+
+    // Suspension spring
+    suspVel += (-stiffness * (suspBounce - targetY) - damping * suspVel + bumpForce * 80) * dt;
+    suspBounce += suspVel * dt;
+    suspBounce = Math.max(-0.15, Math.min(0.15, suspBounce));
+
+    // Smooth pitch (nose dive on brake, squat on accel)
+    const targetPitch = accelForce2 + bumpForce * 0.5;
+    suspPitch += (targetPitch - suspPitch) * Math.min(1, 8 * dt);
+
+    // Smooth roll (lean into turns)
+    const targetRoll = -carSteerAngle * 0.25 * Math.min(absSpeed / 20, 1);
+    suspRoll += (targetRoll - suspRoll) * Math.min(1, 6 * dt);
+
     // ── Update car mesh ──
-    playerCar.position.set(carX, carY, carZ);
+    playerCar.position.set(carX, carY + suspBounce, carZ);
     playerCar.rotation.y = carHeading;
 
-    // Tilt car into turns
-    playerCar.rotation.z = -carSteerAngle * 0.15 * Math.min(absSpeed / 30, 1);
+    // Body tilt: roll from suspension + pitch
+    playerCar.rotation.z = suspRoll;
+    playerCar.rotation.x = suspPitch;
 
     // Wheel spin
     if (playerCar.wheels) {
@@ -3217,11 +3258,18 @@ function updateAI(dt) {
         const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), dir).normalize();
 
         ai.mesh.position.copy(pos).add(right.clone().multiplyScalar(ai.lateralOffset));
-        ai.mesh.position.y += 0.1;
+        // AI suspension bounce
+        const aiBounce = Math.sin(raceTime * 14 + ai.t * 200) * ai.speed * 0.002
+                       + Math.sin(raceTime * 22 + ai.t * 300) * ai.speed * 0.001;
+        ai.mesh.position.y += 0.1 + aiBounce;
 
         const lookTarget = new THREE.Vector3().copy(pos).add(dir.clone().multiplyScalar(5));
         lookTarget.y = ai.mesh.position.y;
         ai.mesh.lookAt(lookTarget);
+
+        // AI body roll from lateral movement
+        ai.mesh.rotation.z = -Math.sin(raceTime * 1.5 + ai.t * 50) * 0.03;
+        ai.mesh.rotation.x = aiBounce * 2;
 
         // Wheel spin
         if (ai.mesh.wheels) {
