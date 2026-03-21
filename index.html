@@ -573,6 +573,7 @@
         <div><span class="control-key">A</span> or <span class="control-key">&larr;</span> &mdash; Steer Left</div>
         <div><span class="control-key">D</span> or <span class="control-key">&rarr;</span> &mdash; Steer Right</div>
         <div><span class="control-key">Space</span> &mdash; Handbrake</div>
+        <div><span class="control-key">P</span> &mdash; Drift Mode</div>
         <div><span class="control-key">Shift</span> &mdash; Nitro Boost</div>
         <div><span class="control-key">C</span> &mdash; Change Camera</div>
         <div><span class="control-key">Esc</span> &mdash; Pause</div>
@@ -649,6 +650,7 @@
     <div class="hud-panel">
         <div class="hud-speed" id="hud-speed">0</div>
         <div class="hud-speed-unit">KM/H</div>
+        <div id="drift-indicator" style="display:none;color:#ff6b35;font-weight:bold;font-size:14px;margin-top:4px;text-shadow:0 0 8px #ff6b35;">DRIFT</div>
         <div style="margin-top:8px;">
             <div class="hud-label">Nitro</div>
             <div class="stat-bar" style="width:120px;"><div class="stat-fill" id="nitro-bar" style="width:100%;"></div></div>
@@ -3255,6 +3257,12 @@ function updatePlayer(dt) {
         if (!wasDrifting && Math.abs(playerSpeed) > 10) SoundEngine.playDrift();
     }
 
+    // Drift mode (P key) - keeps speed, loose rear grip, wider steering
+    if (keys['p']) {
+        drifting = true;
+        if (!wasDrifting && Math.abs(playerSpeed) > 10) SoundEngine.playDrift();
+    }
+
     // Nitro
     if (keys['shift'] && nitro > 0) {
         playerSpeed = Math.min(playerSpeed + accelForce * 3 * dt, maxSpd * 1.4);
@@ -3571,6 +3579,7 @@ function updateHUD() {
     document.getElementById('hud-speed').textContent = displaySpeed;
     document.getElementById('hud-lap').textContent = Math.min(playerLap, GameState.laps);
     document.getElementById('nitro-bar').style.width = nitro + '%';
+    document.getElementById('drift-indicator').style.display = drifting && keys['p'] ? 'block' : 'none';
 
     const positions = getPositions();
     const playerPos = positions.findIndex(p => p.isPlayer) + 1;
