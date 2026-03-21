@@ -27,14 +27,14 @@
         .screen.active { display: flex; }
 
         .game-title {
-            font-size: 72px;
+            font-size: 48px;
             font-weight: 900;
             background: linear-gradient(45deg, #ff6b35, #f7c948, #ff6b35);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             text-shadow: none;
-            margin-bottom: 10px;
-            letter-spacing: 4px;
+            margin-bottom: 6px;
+            letter-spacing: 3px;
             animation: titlePulse 2s ease-in-out infinite;
         }
         @keyframes titlePulse {
@@ -42,21 +42,21 @@
             50% { transform: scale(1.05); }
         }
         .game-subtitle {
-            font-size: 18px;
+            font-size: 13px;
             color: #8888cc;
-            margin-bottom: 40px;
-            letter-spacing: 8px;
+            margin-bottom: 20px;
+            letter-spacing: 6px;
             text-transform: uppercase;
         }
 
         .menu-btn {
-            padding: 16px 48px;
-            font-size: 20px;
+            padding: 10px 32px;
+            font-size: 15px;
             font-weight: 700;
             border: none;
-            border-radius: 12px;
+            border-radius: 10px;
             cursor: pointer;
-            margin: 8px;
+            margin: 5px;
             transition: all 0.3s;
             text-transform: uppercase;
             letter-spacing: 2px;
@@ -83,16 +83,16 @@
         /* ── Selection Cards ── */
         .selection-grid {
             display: flex;
-            gap: 20px;
+            gap: 12px;
             flex-wrap: wrap;
             justify-content: center;
-            margin: 30px 0;
-            max-width: 900px;
+            margin: 15px 0;
+            max-width: 850px;
         }
         .card {
-            width: 200px;
-            padding: 20px;
-            border-radius: 16px;
+            width: 155px;
+            padding: 12px;
+            border-radius: 12px;
             background: rgba(255,255,255,0.05);
             border: 2px solid rgba(255,255,255,0.1);
             cursor: pointer;
@@ -110,21 +110,21 @@
             box-shadow: 0 0 20px rgba(255,107,53,0.3);
         }
         .card-icon {
-            font-size: 48px;
-            margin-bottom: 10px;
-        }
-        .card-title {
-            font-size: 18px;
-            font-weight: 700;
+            font-size: 32px;
             margin-bottom: 6px;
         }
+        .card-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
         .card-desc {
-            font-size: 12px;
+            font-size: 10px;
             color: #888;
         }
         .card-stats {
-            margin-top: 10px;
-            font-size: 11px;
+            margin-top: 6px;
+            font-size: 10px;
         }
         .stat-bar {
             height: 6px;
@@ -145,9 +145,9 @@
         }
 
         .section-title {
-            font-size: 32px;
+            font-size: 24px;
             font-weight: 800;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
             background: linear-gradient(45deg, #ff6b35, #f7c948);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -160,12 +160,12 @@
         /* Color picker */
         .color-picker {
             display: flex;
-            gap: 10px;
-            margin: 15px 0;
+            gap: 8px;
+            margin: 10px 0;
         }
         .color-swatch {
-            width: 40px;
-            height: 40px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             cursor: pointer;
             border: 3px solid transparent;
@@ -434,32 +434,32 @@
         .login-box {
             background: rgba(20,20,40,0.95);
             border: 1px solid rgba(255,107,53,0.3);
-            border-radius: 16px;
-            padding: 30px;
-            max-width: 360px;
+            border-radius: 14px;
+            padding: 24px;
+            max-width: 320px;
             width: 90%;
             text-align: center;
         }
         .login-box h2 {
             color: #ff6b35;
-            font-size: 26px;
-            margin-bottom: 6px;
+            font-size: 22px;
+            margin-bottom: 4px;
         }
         .login-box p {
             color: #888;
-            margin-bottom: 16px;
-            font-size: 13px;
+            margin-bottom: 12px;
+            font-size: 12px;
         }
         .login-box .menu-btn {
-            padding: 12px 40px;
-            font-size: 17px;
+            padding: 10px 32px;
+            font-size: 14px;
             width: 100%;
             margin: 4px 0;
         }
         .login-input {
             width: 100%;
-            padding: 12px 14px;
-            margin-bottom: 10px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
             border: 1px solid rgba(255,255,255,0.15);
             border-radius: 10px;
             background: rgba(255,255,255,0.08);
