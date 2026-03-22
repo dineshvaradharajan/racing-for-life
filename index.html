@@ -2244,342 +2244,298 @@ function buildCarMesh(color, carDef) {
         }
 
     } else if (style === 'bugatti') {
-        // ── Bugatti Veyron: realistic smooth curved body using LatheGeometry ──
-        const bW = W * 1.12, bH = H * 0.9, bL = L * 1.1;
-        const rearMat = new THREE.MeshPhongMaterial({ color: 0x0a0a0a, shininess: 250, specular: 0x555555 });
-        const grilleMat = new THREE.MeshPhongMaterial({ color: 0xc0c0c0, shininess: 400, specular: 0xffffff });
+        // ── Bugatti Veyron: proper car shape using ExtrudeGeometry side profile ──
+        const bW = W * 1.12, bH = H * 0.92, bL = L * 1.1;
+        const rearMat = new THREE.MeshPhongMaterial({ color: 0x080808, shininess: 280, specular: 0x666666 });
+        const grilleMat = new THREE.MeshPhongMaterial({ color: 0xd0d0d0, shininess: 400, specular: 0xffffff });
 
-        // ── MAIN BODY: smooth curved shell using custom BufferGeometry ──
-        // Build a realistic car profile by layering smooth rounded sections
-        // Front section (colored) + Rear section (dark) = two-tone Veyron split
+        // ── MAIN BODY: ExtrudeGeometry with real car cross-section ──
+        // Front half (colored) - wider at bottom, narrowing at top like a real car
+        const frontShape = new THREE.Shape();
+        frontShape.moveTo(-bW/2, 0);
+        frontShape.lineTo(bW/2, 0);
+        frontShape.lineTo(bW/2, bH * 0.75);
+        frontShape.quadraticCurveTo(bW/2, bH, bW * 0.38, bH);
+        frontShape.lineTo(-bW * 0.38, bH);
+        frontShape.quadraticCurveTo(-bW/2, bH, -bW/2, bH * 0.75);
+        frontShape.closePath();
+        const frontGeo = new THREE.ExtrudeGeometry(frontShape, {
+            depth: bL * 0.58, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.06, bevelSegments: 4
+        });
+        const frontBody = new THREE.Mesh(frontGeo, mat);
+        frontBody.position.set(0, wR, -bL * 0.08);
+        frontBody.castShadow = true;
+        group.add(frontBody);
 
-        // Front colored body (from nose to B-pillar)
-        const frontBodyGeo = new THREE.BoxGeometry(bW, bH, bL * 0.55);
-        frontBodyGeo.translate(0, 0, bL * 0.08);
-        // Round the top edges
-        const fbody = new THREE.Mesh(frontBodyGeo, mat);
-        fbody.position.set(0, wR + bH/2, 0);
-        fbody.castShadow = true;
-        group.add(fbody);
+        // Rear half (dark, two-tone) - slightly wider for Veyron hip
+        const rearShape = new THREE.Shape();
+        rearShape.moveTo(-bW * 0.54, 0);
+        rearShape.lineTo(bW * 0.54, 0);
+        rearShape.lineTo(bW * 0.54, bH * 0.7);
+        rearShape.quadraticCurveTo(bW * 0.54, bH * 0.95, bW * 0.36, bH * 0.95);
+        rearShape.lineTo(-bW * 0.36, bH * 0.95);
+        rearShape.quadraticCurveTo(-bW * 0.54, bH * 0.95, -bW * 0.54, bH * 0.7);
+        rearShape.closePath();
+        const rearGeo = new THREE.ExtrudeGeometry(rearShape, {
+            depth: bL * 0.44, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.05, bevelSegments: 3
+        });
+        const rearBody = new THREE.Mesh(rearGeo, rearMat);
+        rearBody.position.set(0, wR, -bL/2);
+        rearBody.castShadow = true;
+        group.add(rearBody);
 
-        // Smooth rounded top on front body
-        const ftopGeo = new THREE.CylinderGeometry(bW/2, bW/2, bL * 0.55, 16, 1, false, 0, Math.PI);
-        const ftop = new THREE.Mesh(ftopGeo, mat);
-        ftop.rotation.x = Math.PI / 2;
-        ftop.rotation.z = Math.PI;
-        ftop.position.set(0, wR + bH, bL * 0.08);
-        group.add(ftop);
-
-        // Rear dark body (from B-pillar to tail)
-        const rearBodyGeo = new THREE.BoxGeometry(bW * 1.02, bH, bL * 0.45);
-        rearBodyGeo.translate(0, 0, 0);
-        const rbody = new THREE.Mesh(rearBodyGeo, rearMat);
-        rbody.position.set(0, wR + bH/2, -bL * 0.22);
-        rbody.castShadow = true;
-        group.add(rbody);
-
-        // Smooth rounded top on rear body
-        const rtopGeo = new THREE.CylinderGeometry(bW * 0.51, bW * 0.51, bL * 0.45, 16, 1, false, 0, Math.PI);
-        const rtop = new THREE.Mesh(rtopGeo, rearMat);
-        rtop.rotation.x = Math.PI / 2;
-        rtop.rotation.z = Math.PI;
-        rtop.position.set(0, wR + bH, -bL * 0.22);
-        group.add(rtop);
-
-        // Front nose - smooth sphere cap for rounded front
-        const noseGeo = new THREE.SphereGeometry(bW * 0.5, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+        // ── FRONT NOSE (low, sloping down like real Veyron) ──
+        const noseShape = new THREE.Shape();
+        noseShape.moveTo(-bW * 0.48, 0);
+        noseShape.lineTo(bW * 0.48, 0);
+        noseShape.lineTo(bW * 0.42, bH * 0.55);
+        noseShape.quadraticCurveTo(bW * 0.35, bH * 0.7, 0, bH * 0.72);
+        noseShape.quadraticCurveTo(-bW * 0.35, bH * 0.7, -bW * 0.42, bH * 0.55);
+        noseShape.closePath();
+        const noseGeo = new THREE.ExtrudeGeometry(noseShape, {
+            depth: 0.25, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 3
+        });
         const nose = new THREE.Mesh(noseGeo, mat);
-        nose.rotation.x = -Math.PI / 2;
-        nose.scale.set(1, 0.5, 0.75);
-        nose.position.set(0, wR + bH * 0.35, bL/2 + 0.08);
+        nose.position.set(0, wR, bL/2 - 0.08);
         group.add(nose);
 
-        // Rear tail - tapered sphere for smooth rear end
-        const tailGeo = new THREE.SphereGeometry(bW * 0.5, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+        // ── REAR TAIL (tapered, slopes down) ──
+        const tailShape = new THREE.Shape();
+        tailShape.moveTo(-bW * 0.48, 0);
+        tailShape.lineTo(bW * 0.48, 0);
+        tailShape.lineTo(bW * 0.44, bH * 0.65);
+        tailShape.lineTo(bW * 0.35, bH * 0.72);
+        tailShape.lineTo(-bW * 0.35, bH * 0.72);
+        tailShape.lineTo(-bW * 0.44, bH * 0.65);
+        tailShape.closePath();
+        const tailGeo = new THREE.ExtrudeGeometry(tailShape, {
+            depth: 0.2, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 2
+        });
         const tail = new THREE.Mesh(tailGeo, rearMat);
-        tail.rotation.x = Math.PI / 2;
-        tail.scale.set(1, 0.4, 0.65);
-        tail.position.set(0, wR + bH * 0.35, -bL/2 - 0.05);
+        tail.rotation.y = Math.PI;
+        tail.position.set(0, wR, -bL/2 - 0.02);
         group.add(tail);
 
-        // ── HORSESHOE GRILLE (Bugatti signature, centered front) ──
-        // Outer horseshoe frame
-        const hsGeo = new THREE.TorusGeometry(bH * 0.48, 0.05, 10, 20, Math.PI);
-        const hs = new THREE.Mesh(hsGeo, grilleMat);
-        hs.rotation.y = Math.PI / 2;
-        hs.rotation.z = Math.PI;
-        hs.position.set(0, wR + bH * 0.52, bL/2 + 0.15);
-        group.add(hs);
-        // Inner grille mesh (dark with chrome slats)
-        const gBackGeo = new THREE.BoxGeometry(bW * 0.28, bH * 0.55, 0.03);
-        const gBack = new THREE.Mesh(gBackGeo, darkMat);
-        gBack.position.set(0, wR + bH * 0.35, bL/2 + 0.14);
-        group.add(gBack);
-        // Chrome slats inside grille
-        for (let i = 0; i < 7; i++) {
-            const slatGeo = new THREE.BoxGeometry(bW * 0.24, 0.012, 0.04);
-            const slat = new THREE.Mesh(slatGeo, grilleMat);
-            slat.position.set(0, wR + bH * 0.12 + i * bH * 0.08, bL/2 + 0.15);
-            group.add(slat);
-        }
-        // EB badge on horseshoe
-        const badgeGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.02, 12);
-        const badge = new THREE.Mesh(badgeGeo, grilleMat);
-        badge.rotation.x = Math.PI / 2;
-        badge.position.set(0, wR + bH * 0.82, bL/2 + 0.17);
-        group.add(badge);
+        // ── CABIN (Veyron teardrop, sits on top of body) ──
+        const cabShape = new THREE.Shape();
+        cabShape.moveTo(-bW * 0.38, 0);
+        cabShape.lineTo(bW * 0.38, 0);
+        cabShape.quadraticCurveTo(bW * 0.38, bH * 0.5, bW * 0.3, bH * 0.52);
+        cabShape.quadraticCurveTo(0, bH * 0.58, -bW * 0.3, bH * 0.52);
+        cabShape.quadraticCurveTo(-bW * 0.38, bH * 0.5, -bW * 0.38, 0);
+        cabShape.closePath();
+        const cabGeo = new THREE.ExtrudeGeometry(cabShape, {
+            depth: bL * 0.3, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 4
+        });
+        const cabin = new THREE.Mesh(cabGeo, rearMat);
+        cabin.position.set(0, wR + bH, -bL * 0.18);
+        group.add(cabin);
 
-        // ── FRONT BUMPER with air intakes ──
-        const bumperGeo = new THREE.BoxGeometry(bW * 1.06, bH * 0.28, 0.22);
-        const bumper = new THREE.Mesh(bumperGeo, darkMat);
-        bumper.position.set(0, wR + bH * 0.14, bL/2 + 0.1);
-        group.add(bumper);
-        // Side air intakes (front)
-        for (let sx of [-1, 1]) {
-            const intGeo = new THREE.BoxGeometry(bW * 0.22, bH * 0.2, 0.1);
-            const intake = new THREE.Mesh(intGeo, darkMat);
-            intake.position.set(sx * bW * 0.35, wR + bH * 0.12, bL/2 + 0.12);
-            group.add(intake);
-            // Chrome trim around intake
-            const trimGeo = new THREE.BoxGeometry(bW * 0.23, 0.015, 0.11);
-            const trim = new THREE.Mesh(trimGeo, grilleMat);
-            trim.position.set(sx * bW * 0.35, wR + bH * 0.22, bL/2 + 0.12);
-            group.add(trim);
-        }
-
-        // ── FRONT SPLITTER ──
-        const splitGeo = new THREE.BoxGeometry(bW * 1.1, 0.04, 0.35);
-        const splitter = new THREE.Mesh(splitGeo, darkMat);
-        splitter.position.set(0, wR * 0.3, bL/2 + 0.05);
-        group.add(splitter);
-
-        // ── LONG FLOWING HOOD ──
-        const hoodGeo = new THREE.BoxGeometry(bW * 0.92, 0.06, bL * 0.38);
+        // ── HOOD (long, slightly convex, colored) ──
+        const hoodGeo = new THREE.BoxGeometry(bW * 0.88, 0.08, bL * 0.4);
         const hood = new THREE.Mesh(hoodGeo, mat);
-        hood.position.set(0, wR + bH + 0.02, bL * 0.2);
-        hood.rotation.x = 0.03;
+        hood.position.set(0, wR + bH + 0.04, bL * 0.18);
+        hood.rotation.x = 0.04;
         group.add(hood);
-
-        // Hood vents (2 parallel lines)
+        // Hood center crease
+        const creaseGeo = new THREE.BoxGeometry(0.03, 0.02, bL * 0.35);
+        const crease = new THREE.Mesh(creaseGeo, mat);
+        crease.position.set(0, wR + bH + 0.09, bL * 0.18);
+        group.add(crease);
+        // Hood vents
         for (let sx of [-1, 1]) {
-            const ventGeo = new THREE.BoxGeometry(bW * 0.06, 0.04, bL * 0.12);
+            const ventGeo = new THREE.BoxGeometry(bW * 0.08, 0.035, bL * 0.1);
             const vent = new THREE.Mesh(ventGeo, darkMat);
-            vent.position.set(sx * bW * 0.18, wR + bH + 0.06, bL * 0.22);
+            vent.position.set(sx * bW * 0.2, wR + bH + 0.06, bL * 0.25);
             group.add(vent);
         }
 
-        // ── WINDSHIELD (smoothly raked, Veyron curve) ──
-        const wsGeo = new THREE.BoxGeometry(bW * 0.76, 0.04, bH * 2.8);
+        // ── WINDSHIELD (raked, Veyron style) ──
+        const wsGeo = new THREE.BoxGeometry(bW * 0.72, 0.04, bH * 2.2);
         const ws = new THREE.Mesh(wsGeo, glassMat);
-        ws.position.set(0, wR + bH + 0.42, bL * 0.01);
-        ws.rotation.x = -0.85;
+        ws.position.set(0, wR + bH + 0.38, bL * 0.02);
+        ws.rotation.x = -0.82;
         group.add(ws);
 
-        // ── CABIN / ROOF (Veyron teardrop bubble) ──
-        // Rounded roof using sphere segment
-        const roofGeo = new THREE.SphereGeometry(bW * 0.42, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.45);
-        const roof = new THREE.Mesh(roofGeo, rearMat);
-        roof.scale.set(1, 0.35, 1.4);
-        roof.position.set(0, wR + bH + 0.35, -bL * 0.06);
-        group.add(roof);
-
-        // A-pillar (windshield frame)
-        for (let sx of [-1, 1]) {
-            const apGeo = new THREE.BoxGeometry(0.04, 0.5, 0.04);
-            const ap = new THREE.Mesh(apGeo, rearMat);
-            ap.rotation.z = sx * 0.25;
-            ap.rotation.x = -0.3;
-            ap.position.set(sx * bW * 0.37, wR + bH + 0.35, bL * 0.04);
-            group.add(ap);
-        }
-
-        // ── REAR WINDOW (small, sloped) ──
-        const rwGeo = new THREE.BoxGeometry(bW * 0.5, 0.04, bH * 1.4);
+        // ── REAR WINDOW ──
+        const rwGeo = new THREE.BoxGeometry(bW * 0.48, 0.04, bH * 1.1);
         const rw = new THREE.Mesh(rwGeo, glassMat);
-        rw.position.set(0, wR + bH + 0.32, -bL * 0.18);
-        rw.rotation.x = 0.55;
+        rw.position.set(0, wR + bH + 0.28, -bL * 0.2);
+        rw.rotation.x = 0.5;
         group.add(rw);
 
         // ── SIDE WINDOWS ──
         for (let sx of [-1, 1]) {
-            const swGeo = new THREE.BoxGeometry(0.04, bH * 0.38, bL * 0.17);
+            const swGeo = new THREE.BoxGeometry(0.04, bH * 0.32, bL * 0.16);
             const sw = new THREE.Mesh(swGeo, glassMat);
-            sw.position.set(sx * (bW/2 + 0.01), wR + bH + 0.18, -bL * 0.01);
+            sw.position.set(sx * bW * 0.37, wR + bH + 0.2, -bL * 0.04);
             group.add(sw);
         }
 
-        // ── SIDE MIRRORS (teardrop shaped) ──
+        // ── HORSESHOE GRILLE (Bugatti signature) ──
+        const hsGeo = new THREE.TorusGeometry(bH * 0.42, 0.04, 10, 20, Math.PI);
+        const hs = new THREE.Mesh(hsGeo, grilleMat);
+        hs.rotation.y = Math.PI / 2;
+        hs.rotation.z = Math.PI;
+        hs.position.set(0, wR + bH * 0.48, bL/2 + 0.18);
+        group.add(hs);
+        // Grille background
+        const gBackGeo = new THREE.BoxGeometry(bW * 0.25, bH * 0.5, 0.03);
+        const gBack = new THREE.Mesh(gBackGeo, darkMat);
+        gBack.position.set(0, wR + bH * 0.32, bL/2 + 0.16);
+        group.add(gBack);
+        // Chrome vertical slats
+        for (let i = -3; i <= 3; i++) {
+            const slatGeo = new THREE.BoxGeometry(0.012, bH * 0.42, 0.04);
+            const slat = new THREE.Mesh(slatGeo, grilleMat);
+            slat.position.set(i * bW * 0.032, wR + bH * 0.32, bL/2 + 0.17);
+            group.add(slat);
+        }
+        // EB badge
+        const badgeGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.02, 12);
+        const badge = new THREE.Mesh(badgeGeo, grilleMat);
+        badge.rotation.x = Math.PI / 2;
+        badge.position.set(0, wR + bH * 0.76, bL/2 + 0.19);
+        group.add(badge);
+
+        // ── FRONT BUMPER ──
+        const bmpGeo = new THREE.BoxGeometry(bW * 1.04, bH * 0.24, 0.18);
+        const bmp = new THREE.Mesh(bmpGeo, darkMat);
+        bmp.position.set(0, wR + bH * 0.12, bL/2 + 0.12);
+        group.add(bmp);
+        // Front side intakes
         for (let sx of [-1, 1]) {
-            // Mirror arm
-            const armGeo = new THREE.BoxGeometry(0.18, 0.04, 0.05);
-            const arm = new THREE.Mesh(armGeo, rearMat);
-            arm.position.set(sx * (bW/2 + 0.08), wR + bH + 0.08, bL * 0.1);
-            group.add(arm);
-            // Mirror head
-            const mirGeo = new THREE.SphereGeometry(0.06, 8, 6);
-            const mir = new THREE.Mesh(mirGeo, rearMat);
-            mir.scale.set(0.6, 0.8, 1.2);
-            mir.position.set(sx * (bW/2 + 0.16), wR + bH + 0.08, bL * 0.1);
-            group.add(mir);
+            const fiGeo = new THREE.BoxGeometry(bW * 0.2, bH * 0.18, 0.1);
+            const fi = new THREE.Mesh(fiGeo, darkMat);
+            fi.position.set(sx * bW * 0.36, wR + bH * 0.1, bL/2 + 0.14);
+            group.add(fi);
         }
 
-        // ── MASSIVE SIDE AIR INTAKES (Veyron's signature cooling) ──
+        // ── FRONT SPLITTER ──
+        const splGeo = new THREE.BoxGeometry(bW * 1.08, 0.035, 0.3);
+        const spl = new THREE.Mesh(splGeo, darkMat);
+        spl.position.set(0, wR * 0.3, bL/2 + 0.06);
+        group.add(spl);
+
+        // ── HEADLIGHTS (Veyron narrow teardrop) ──
         for (let sx of [-1, 1]) {
-            // Main intake scoop
-            const scoopGeo = new THREE.BoxGeometry(0.12, bH * 0.65, bL * 0.24);
-            const scoop = new THREE.Mesh(scoopGeo, darkMat);
-            scoop.position.set(sx * (bW/2 + 0.05), wR + bH * 0.42, -bL * 0.14);
-            group.add(scoop);
-            // Chrome mesh lines (horizontal)
+            const hlBodyGeo = new THREE.BoxGeometry(bW * 0.18, bH * 0.14, 0.18);
+            const hlBody = new THREE.Mesh(hlBodyGeo, grilleMat);
+            hlBody.position.set(sx * bW * 0.36, wR + bH * 0.68, bL/2 + 0.1);
+            group.add(hlBody);
+            const hlLensGeo = new THREE.BoxGeometry(bW * 0.15, bH * 0.1, 0.04);
+            const hlLens = new THREE.Mesh(hlLensGeo, hlMat);
+            hlLens.position.set(sx * bW * 0.36, wR + bH * 0.68, bL/2 + 0.18);
+            group.add(hlLens);
+        }
+
+        // ── SIDE AIR INTAKES (Veyron's huge rear cooling scoops) ──
+        for (let sx of [-1, 1]) {
+            const siGeo = new THREE.BoxGeometry(0.1, bH * 0.6, bL * 0.22);
+            const si = new THREE.Mesh(siGeo, darkMat);
+            si.position.set(sx * (bW * 0.55), wR + bH * 0.42, -bL * 0.16);
+            group.add(si);
+            // Horizontal slats
             for (let i = 0; i < 5; i++) {
-                const meshGeo = new THREE.BoxGeometry(0.13, 0.015, bL * 0.2);
-                const meshLine = new THREE.Mesh(meshGeo, grilleMat);
-                meshLine.position.set(sx * (bW/2 + 0.06), wR + bH * 0.18 + i * bH * 0.12, -bL * 0.14);
-                group.add(meshLine);
-            }
-            // Vertical dividers
-            for (let j = 0; j < 3; j++) {
-                const divGeo = new THREE.BoxGeometry(0.13, bH * 0.55, 0.012);
-                const div = new THREE.Mesh(divGeo, grilleMat);
-                div.position.set(sx * (bW/2 + 0.06), wR + bH * 0.38, -bL * 0.06 - j * bL * 0.08);
-                group.add(div);
+                const slGeo = new THREE.BoxGeometry(0.11, 0.015, bL * 0.18);
+                const sl = new THREE.Mesh(slGeo, grilleMat);
+                sl.position.set(sx * (bW * 0.56), wR + bH * 0.18 + i * bH * 0.11, -bL * 0.16);
+                group.add(sl);
             }
         }
 
-        // ── C-LINE (signature side character line separating two-tone) ──
+        // ── C-LINE (chrome line dividing two-tone) ──
         for (let sx of [-1, 1]) {
-            const cGeo = new THREE.BoxGeometry(0.025, 0.035, bL * 0.65);
-            const cLine = new THREE.Mesh(cGeo, grilleMat);
-            cLine.position.set(sx * (bW/2 + 0.02), wR + bH * 0.75, -bL * 0.02);
-            group.add(cLine);
-        }
-
-        // ── WIDE REAR HAUNCHES (muscular fenders) ──
-        for (let sx of [-1, 1]) {
-            // Fender bulge (rounded)
-            const fGeo = new THREE.SphereGeometry(bL * 0.15, 12, 10);
-            const fender = new THREE.Mesh(fGeo, rearMat);
-            fender.scale.set(0.35, 0.7, 1);
-            fender.position.set(sx * (bW/2 + 0.08), wR + bH * 0.5, -bL * 0.28);
-            group.add(fender);
+            const clGeo = new THREE.BoxGeometry(0.02, 0.03, bL * 0.6);
+            const cl = new THREE.Mesh(clGeo, grilleMat);
+            cl.position.set(sx * (bW/2 + 0.01), wR + bH * 0.78, -bL * 0.04);
+            group.add(cl);
         }
 
         // ── SIDE SKIRTS ──
         for (let sx of [-1, 1]) {
-            const skGeo = new THREE.BoxGeometry(0.06, bH * 0.18, bL * 0.7);
-            const skirt = new THREE.Mesh(skGeo, darkMat);
-            skirt.position.set(sx * (bW/2 + 0.02), wR + bH * 0.08, 0);
-            group.add(skirt);
+            const skGeo = new THREE.BoxGeometry(0.05, bH * 0.15, bL * 0.7);
+            const sk = new THREE.Mesh(skGeo, darkMat);
+            sk.position.set(sx * (bW/2 + 0.01), wR + bH * 0.06, 0);
+            group.add(sk);
         }
 
-        // ── REAR SPOILER (retractable lip, deployed) ──
-        const spGeo = new THREE.BoxGeometry(bW * 0.7, 0.04, 0.32);
-        const spoiler = new THREE.Mesh(spGeo, rearMat);
-        spoiler.position.set(0, wR + bH + 0.18, -bL/2 + 0.08);
-        spoiler.rotation.x = -0.1;
-        group.add(spoiler);
-        // Spoiler supports
+        // ── SIDE MIRRORS ──
         for (let sx of [-1, 1]) {
-            const supGeo = new THREE.BoxGeometry(0.04, 0.2, 0.06);
-            const sup = new THREE.Mesh(supGeo, grilleMat);
-            sup.position.set(sx * bW * 0.28, wR + bH + 0.08, -bL/2 + 0.1);
-            group.add(sup);
+            const mArmGeo = new THREE.BoxGeometry(0.16, 0.035, 0.04);
+            const mArm = new THREE.Mesh(mArmGeo, rearMat);
+            mArm.position.set(sx * (bW/2 + 0.07), wR + bH + 0.06, bL * 0.08);
+            group.add(mArm);
+            const mHeadGeo = new THREE.BoxGeometry(0.08, 0.06, 0.1);
+            const mHead = new THREE.Mesh(mHeadGeo, rearMat);
+            mHead.position.set(sx * (bW/2 + 0.14), wR + bH + 0.06, bL * 0.08);
+            group.add(mHead);
         }
 
-        // ── REAR ENGINE COVER VENTS (Veyron has engine visible) ──
-        const engCoverGeo = new THREE.BoxGeometry(bW * 0.55, 0.05, bL * 0.18);
-        const engCover = new THREE.Mesh(engCoverGeo, glassMat);
-        engCover.position.set(0, wR + bH + 0.02, -bL * 0.28);
-        group.add(engCover);
-        // Vent slats on engine cover
-        for (let i = 0; i < 4; i++) {
-            const evGeo = new THREE.BoxGeometry(bW * 0.5, 0.02, 0.015);
+        // ── ENGINE COVER (glass panel, Veyron shows W16) ──
+        const ecGeo = new THREE.BoxGeometry(bW * 0.5, 0.04, bL * 0.16);
+        const ec = new THREE.Mesh(ecGeo, glassMat);
+        ec.position.set(0, wR + bH + 0.01, -bL * 0.3);
+        group.add(ec);
+        // Chrome vent slats on engine cover
+        for (let i = 0; i < 5; i++) {
+            const evGeo = new THREE.BoxGeometry(bW * 0.45, 0.018, 0.012);
             const ev = new THREE.Mesh(evGeo, grilleMat);
-            ev.position.set(0, wR + bH + 0.04, -bL * 0.22 - i * 0.04);
+            ev.position.set(0, wR + bH + 0.03, -bL * 0.24 - i * 0.032);
             group.add(ev);
         }
 
-        // ── REAR BUMPER + MASSIVE DIFFUSER ──
-        const rbGeo = new THREE.BoxGeometry(bW * 0.95, bH * 0.3, 0.18);
-        const rBumper = new THREE.Mesh(rbGeo, darkMat);
-        rBumper.position.set(0, wR + bH * 0.15, -bL/2 - 0.06);
-        group.add(rBumper);
-        // Diffuser fins
-        for (let i = 0; i < 5; i++) {
-            const finGeo = new THREE.BoxGeometry(0.02, bH * 0.15, 0.25);
-            const fin = new THREE.Mesh(finGeo, darkMat);
-            fin.position.set(-bW * 0.3 + i * bW * 0.15, wR + 0.06, -bL/2 - 0.08);
-            group.add(fin);
+        // ── REAR SPOILER (retractable, deployed) ──
+        const spGeo = new THREE.BoxGeometry(bW * 0.68, 0.04, 0.28);
+        const sp = new THREE.Mesh(spGeo, rearMat);
+        sp.position.set(0, wR + bH * 0.95 + 0.15, -bL/2 + 0.08);
+        sp.rotation.x = -0.12;
+        group.add(sp);
+        for (let sx of [-1, 1]) {
+            const stGeo = new THREE.BoxGeometry(0.035, 0.18, 0.05);
+            const st = new THREE.Mesh(stGeo, grilleMat);
+            st.position.set(sx * bW * 0.28, wR + bH * 0.95 + 0.06, -bL/2 + 0.1);
+            group.add(st);
         }
 
-        // ── QUAD EXHAUST (2 per side, stacked) ──
+        // ── REAR DIFFUSER ──
+        const dfGeo = new THREE.BoxGeometry(bW * 0.88, bH * 0.2, 0.3);
+        const df = new THREE.Mesh(dfGeo, darkMat);
+        df.position.set(0, wR + 0.06, -bL/2 - 0.06);
+        group.add(df);
+        // Diffuser fins
+        for (let i = 0; i < 5; i++) {
+            const fnGeo = new THREE.BoxGeometry(0.018, bH * 0.14, 0.22);
+            const fn = new THREE.Mesh(fnGeo, darkMat);
+            fn.position.set(-bW * 0.28 + i * bW * 0.14, wR + 0.06, -bL/2 - 0.06);
+            group.add(fn);
+        }
+
+        // ── QUAD EXHAUST (2 per side, Veyron signature) ──
         for (let sx of [-1, 1]) {
             for (let sy of [0, 1]) {
-                const exGeo = new THREE.CylinderGeometry(0.06, 0.08, 0.22, 12);
+                const exGeo = new THREE.CylinderGeometry(0.055, 0.07, 0.2, 12);
                 const ex = new THREE.Mesh(exGeo, chromeMat);
                 ex.rotation.x = Math.PI / 2;
-                ex.position.set(sx * 0.28, wR + 0.16 + sy * 0.14, -bL/2 - 0.18);
+                ex.position.set(sx * 0.26, wR + 0.15 + sy * 0.13, -bL/2 - 0.16);
                 group.add(ex);
-                // Chrome ring around exhaust tip
-                const ringGeo = new THREE.TorusGeometry(0.075, 0.012, 8, 16);
-                const ring = new THREE.Mesh(ringGeo, grilleMat);
-                ring.position.set(sx * 0.28, wR + 0.16 + sy * 0.14, -bL/2 - 0.28);
-                group.add(ring);
             }
         }
 
-        // ── TAILLIGHTS (Veyron oval style) ──
+        // ── TAILLIGHTS (Veyron oval) ──
         for (let sx of [-1, 1]) {
-            // Main taillight (oval)
-            const tlOvalGeo = new THREE.SphereGeometry(0.1, 10, 8);
-            const tlOval = new THREE.Mesh(tlOvalGeo, tlMat);
-            tlOval.scale.set(1.6, 0.8, 0.3);
-            tlOval.position.set(sx * bW * 0.33, wR + bH * 0.55, -bL/2 - 0.02);
-            group.add(tlOval);
-            // Chrome surround
-            const tlRingGeo = new THREE.TorusGeometry(0.11, 0.015, 8, 16);
-            const tlRing = new THREE.Mesh(tlRingGeo, grilleMat);
-            tlRing.scale.set(1.5, 0.8, 1);
-            tlRing.position.set(sx * bW * 0.33, wR + bH * 0.55, -bL/2 - 0.03);
-            group.add(tlRing);
+            const toGeo = new THREE.BoxGeometry(bW * 0.16, bH * 0.1, 0.05);
+            const to = new THREE.Mesh(toGeo, tlMat);
+            to.position.set(sx * bW * 0.32, wR + bH * 0.55, -bL/2 - 0.02);
+            group.add(to);
         }
 
-        // ── HEADLIGHTS (Veyron teardrop shape) ──
+        // ── DOOR LINES ──
         for (let sx of [-1, 1]) {
-            // Main headlight lens
-            const hlLensGeo = new THREE.SphereGeometry(0.12, 10, 8);
-            const hlLens = new THREE.Mesh(hlLensGeo, hlMat);
-            hlLens.scale.set(1.3, 0.7, 0.4);
-            hlLens.position.set(sx * bW * 0.35, wR + bH * 0.7, bL/2 + 0.08);
-            group.add(hlLens);
-            // Chrome housing
-            const hlHousingGeo = new THREE.SphereGeometry(0.14, 10, 8);
-            const hlHousing = new THREE.Mesh(hlHousingGeo, grilleMat);
-            hlHousing.scale.set(1.4, 0.8, 0.3);
-            hlHousing.position.set(sx * bW * 0.35, wR + bH * 0.7, bL/2 + 0.06);
-            group.add(hlHousing);
-            // DRL strip
-            const drlGeo = new THREE.BoxGeometry(0.22, 0.025, 0.03);
-            const drl = new THREE.Mesh(drlGeo, hlMat);
-            drl.position.set(sx * bW * 0.35, wR + bH * 0.62, bL/2 + 0.1);
-            group.add(drl);
-        }
-
-        // ── DOOR LINE ──
-        for (let sx of [-1, 1]) {
-            const doorGeo = new THREE.BoxGeometry(0.015, bH * 0.7, bL * 0.22);
-            const door = new THREE.Mesh(doorGeo, darkMat);
-            door.position.set(sx * (bW/2 - 0.01), wR + bH * 0.5, bL * 0.05);
-            group.add(door);
-        }
-
-        // ── FRONT WHEEL ARCHES (rounded) ──
-        for (let sx of [-1, 1]) {
-            const archGeo = new THREE.TorusGeometry(wR * 1.3, 0.04, 8, 16, Math.PI);
-            const arch = new THREE.Mesh(archGeo, darkMat);
-            arch.rotation.y = sx * Math.PI / 2;
-            arch.position.set(sx * bW/2, wR, bL * 0.3);
-            group.add(arch);
+            const dlGeo = new THREE.BoxGeometry(0.012, bH * 0.65, bL * 0.2);
+            const dl = new THREE.Mesh(dlGeo, darkMat);
+            dl.position.set(sx * (bW/2 - 0.02), wR + bH * 0.5, bL * 0.04);
+            group.add(dl);
         }
     }
 
