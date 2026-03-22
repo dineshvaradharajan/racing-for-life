@@ -533,14 +533,18 @@
 <div id="login-screen" class="screen active">
     <div class="login-box">
         <h2>MK4 RACER</h2>
-        <p id="login-subtitle">Sign in to race</p>
+        <p id="login-subtitle">Welcome, racer!</p>
+        <div id="login-tabs" style="display:flex;gap:0;margin-bottom:16px;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.15);">
+            <button id="tab-signin" onclick="switchTab('signin')" style="flex:1;padding:8px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:#ff6b35;color:#fff;transition:all 0.2s;">SIGN IN</button>
+            <button id="tab-signup" onclick="switchTab('signup')" style="flex:1;padding:8px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:rgba(255,255,255,0.08);color:#888;transition:all 0.2s;">SIGN UP</button>
+        </div>
         <input type="text" class="login-input" id="login-username" placeholder="Username" maxlength="20" autocomplete="off">
         <input type="password" class="login-input" id="login-password" placeholder="Password" maxlength="30">
-        <div class="login-error" id="login-error"></div>
-        <button class="menu-btn primary" id="login-btn" onclick="handleLogin()">Sign In</button>
-        <div class="login-toggle" id="login-toggle">
-            New player? <a onclick="toggleLoginMode()">Create Account</a>
+        <div id="confirm-password-row" style="display:none;">
+            <input type="password" class="login-input" id="login-confirm" placeholder="Confirm Password" maxlength="30">
         </div>
+        <div class="login-error" id="login-error"></div>
+        <button class="menu-btn primary" id="login-btn" onclick="handleLogin()" style="width:100%;">Sign In</button>
     </div>
 </div>
 
@@ -851,6 +855,29 @@ function simpleHash(str) {
     return hash.toString(36);
 }
 
+function switchTab(tab) {
+    isSignupMode = tab === 'signup';
+    const tabSignin = document.getElementById('tab-signin');
+    const tabSignup = document.getElementById('tab-signup');
+    const confirmRow = document.getElementById('confirm-password-row');
+    const btn = document.getElementById('login-btn');
+
+    if (isSignupMode) {
+        tabSignup.style.background = '#ff6b35'; tabSignup.style.color = '#fff';
+        tabSignin.style.background = 'rgba(255,255,255,0.08)'; tabSignin.style.color = '#888';
+        confirmRow.style.display = 'block';
+        btn.textContent = 'Create Account';
+        document.getElementById('login-subtitle').textContent = 'Create your racer account';
+    } else {
+        tabSignin.style.background = '#ff6b35'; tabSignin.style.color = '#fff';
+        tabSignup.style.background = 'rgba(255,255,255,0.08)'; tabSignup.style.color = '#888';
+        confirmRow.style.display = 'none';
+        btn.textContent = 'Sign In';
+        document.getElementById('login-subtitle').textContent = 'Welcome back, racer!';
+    }
+    document.getElementById('login-error').textContent = '';
+}
+
 function handleLogin() {
     const username = document.getElementById('login-username').value.trim().toLowerCase();
     const password = document.getElementById('login-password').value;
@@ -865,12 +892,14 @@ function handleLogin() {
     const passHash = simpleHash(password);
 
     if (isSignupMode) {
+        const confirm = document.getElementById('login-confirm').value;
+        if (password !== confirm) { errorEl.textContent = 'Passwords do not match!'; return; }
         if (users[username]) { errorEl.textContent = 'Username already taken!'; return; }
         users[username] = { passHash, xp: 0, wins: 0, created: Date.now() };
         saveUsers(users);
         loginAs(username, users[username]);
     } else {
-        if (!users[username]) { errorEl.textContent = 'User not found. Create an account!'; return; }
+        if (!users[username]) { errorEl.textContent = 'User not found. Sign up first!'; return; }
         if (users[username].passHash !== passHash) { errorEl.textContent = 'Wrong password!'; return; }
         loginAs(username, users[username]);
     }
@@ -900,23 +929,9 @@ function logout() {
     document.getElementById('login-password').value = '';
     document.getElementById('login-error').textContent = '';
     isSignupMode = false;
-    updateLoginUI();
+    switchTab('signin');
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('login-screen').classList.add('active');
-}
-
-function toggleLoginMode() {
-    isSignupMode = !isSignupMode;
-    updateLoginUI();
-}
-
-function updateLoginUI() {
-    document.getElementById('login-subtitle').textContent = isSignupMode ? 'Create your racer account' : 'Sign in to race';
-    document.getElementById('login-btn').textContent = isSignupMode ? 'Create Account' : 'Sign In';
-    document.getElementById('login-toggle').innerHTML = isSignupMode
-        ? 'Already have an account? <a onclick="toggleLoginMode()">Sign In</a>'
-        : 'New player? <a onclick="toggleLoginMode()">Create Account</a>';
-    document.getElementById('login-error').textContent = '';
 }
 
 // Auto-login last user
@@ -933,7 +948,7 @@ function updateLoginUI() {
 
 // Allow Enter key to submit login
 document.addEventListener('DOMContentLoaded', () => {
-    ['login-username', 'login-password'].forEach(id => {
+    ['login-username', 'login-password', 'login-confirm'].forEach(id => {
         document.getElementById(id).addEventListener('keydown', e => {
             if (e.key === 'Enter') handleLogin();
         });
