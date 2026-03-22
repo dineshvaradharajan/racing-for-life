@@ -1290,8 +1290,7 @@ function initScene() {
     trackPoints = generateTrack(track);
     buildTrackMesh(track);
 
-    // Scenery
-    addScenery(track);
+    // Scenery disabled — no obstacles on tracks
 
     // Build player car
     playerCar = buildCarMesh(GameState.selectedColor, CARS[GameState.selectedCar]);
