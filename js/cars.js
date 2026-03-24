@@ -7,7 +7,7 @@ function uid(prefix) { return prefix + '_' + (++_carPartId); }
 
 // Map car styles to GLB model files
 const CAR_MODELS = {
-    'ferrari':    { file: 'models/race.glb', scale: 3.5, yOffset: 0 },
+    'ferrari':    { file: 'models/ferrari.glb', scale: 1.2, yOffset: 0, fixRotation: true },
     'lambo':      { file: 'models/sedan-sports.glb', scale: 3.5, yOffset: 0 },
     'hatchback':  { file: 'models/hatchback-sports.glb', scale: 3.5, yOffset: 0 },
     'muscle':     { file: 'models/race.glb', scale: 3.5, yOffset: 0 },
@@ -237,6 +237,13 @@ function cloneModelInto(parentNode, originalMeshes, modelInfo, color) {
 
         if (clone) {
             clone.parent = parentNode;
+
+            // Bake rotation fix into Ferrari mesh vertices permanently
+            if (modelInfo.fixRotation && clone.bakeTransformIntoVertices) {
+                try {
+                    clone.bakeTransformIntoVertices(BABYLON.Matrix.RotationX(-Math.PI / 2));
+                } catch(e) {}
+            }
             clone.isVisible = true;
             clone.setEnabled(true);
 
