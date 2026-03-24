@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MK4 Car Racing - Babylon.js</title>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <script src="https://unpkg.com/earcut@2.2.4/dist/earcut.min.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;overflow:hidden;background:#0a0a1a;color:#fff}
+        #renderCanvas{width:100%;height:100%;display:block;position:fixed;top:0;left:0;z-index:0;touch-action:none}
+        .screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100;background:linear-gradient(135deg,#0a0a2e 0%,#1a0a3e 50%,#0a1a3e 100%);overflow-y:auto;padding:20px 10px;transform:scale(.96);transform-origin:center}
+        .screen.active{display:flex}
+        .game-title{font-size:48px;font-weight:900;background:linear-gradient(45deg,#ff6b35,#f7c948,#ff6b35);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:3px;animation:tp 2s ease-in-out infinite}
+        @keyframes tp{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+        .game-subtitle{font-size:13px;color:#8888cc;margin-bottom:20px;letter-spacing:6px;text-transform:uppercase}
+        .menu-btn{padding:10px 32px;font-size:15px;font-weight:700;border:none;border-radius:10px;cursor:pointer;margin:5px;transition:all .3s;text-transform:uppercase;letter-spacing:2px}
+        .menu-btn.primary{background:linear-gradient(45deg,#ff6b35,#ff8c42);color:#fff;box-shadow:0 4px 20px rgba(255,107,53,.4)}
+        .menu-btn.primary:hover{transform:translateY(-3px);box-shadow:0 8px 30px rgba(255,107,53,.6)}
+        .menu-btn.secondary{background:rgba(255,255,255,.1);color:#fff;border:2px solid rgba(255,255,255,.2)}
+        .menu-btn.secondary:hover{background:rgba(255,255,255,.2);transform:translateY(-2px)}
+        .selection-grid{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:15px 0;max-width:850px}
+        .card{width:155px;padding:12px;border-radius:12px;background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.1);cursor:pointer;transition:all .3s;text-align:center}
+        .card:hover{transform:translateY(-5px);border-color:#ff6b35;background:rgba(255,107,53,.1)}
+        .card.selected{border-color:#ff6b35;background:rgba(255,107,53,.2);box-shadow:0 0 20px rgba(255,107,53,.3)}
+        .card-icon{font-size:32px;margin-bottom:6px}
+        .card-title{font-size:14px;font-weight:700;margin-bottom:4px}
+        .card-desc{font-size:10px;color:#888}
+        .card-stats{margin-top:6px;font-size:10px}
+        .stat-bar{height:6px;background:rgba(255,255,255,.1);border-radius:3px;margin:4px 0;overflow:hidden}
+        .stat-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#ff6b35,#f7c948)}
+        .stat-label{display:flex;justify-content:space-between;color:#aaa}
+        .section-title{font-size:24px;font-weight:800;margin-bottom:4px;background:linear-gradient(45deg,#ff6b35,#f7c948);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .section-subtitle{color:#666;margin-bottom:20px}
+        .color-picker{display:flex;gap:8px;margin:10px 0}
+        .color-swatch{width:30px;height:30px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all .3s}
+        .color-swatch:hover,.color-swatch.selected{border-color:#fff;transform:scale(1.2)}
+        #hud{position:fixed;top:0;left:0;right:0;display:none;padding:15px 30px;z-index:50;pointer-events:none}
+        #hud.active{display:flex;justify-content:space-between;align-items:flex-start}
+        .hud-panel{background:rgba(0,0,0,.6);backdrop-filter:blur(10px);border-radius:12px;padding:12px 20px;border:1px solid rgba(255,255,255,.1)}
+        .hud-speed{font-size:48px;font-weight:900;color:#ff6b35;line-height:1}
+        .hud-speed-unit{font-size:14px;color:#888}
+        .hud-label{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:2px}
+        .hud-value{font-size:22px;font-weight:700}
+        .hud-lap{color:#f7c948}.hud-pos{color:#4ecdc4}.hud-time{color:#ff6b9d}
+        #minimap{position:fixed;bottom:20px;right:20px;width:180px;height:180px;z-index:50;display:none}
+        #minimap.active{display:block}
+        #positions-panel{position:fixed;top:160px;right:20px;z-index:50;display:none}
+        #positions-panel.active{display:block}
+        .pos-entry{display:flex;align-items:center;gap:10px;padding:6px 14px;margin:3px 0;border-radius:8px;background:rgba(0,0,0,.5);backdrop-filter:blur(5px);font-size:14px;font-weight:600}
+        .pos-entry.player{border:1px solid #ff6b35;background:rgba(255,107,53,.2)}
+        .pos-number{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900}
+        .pos-entry:nth-child(1) .pos-number{background:#f7c948;color:#000}
+        .pos-entry:nth-child(2) .pos-number{background:#c0c0c0;color:#000}
+        .pos-entry:nth-child(3) .pos-number{background:#cd7f32;color:#000}
+        #countdown{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:200;font-size:150px;font-weight:900;color:#ff6b35;text-shadow:0 0 50px rgba(255,107,53,.5)}
+        #countdown.active{display:flex}
+        #result-screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:200;background:rgba(0,0,0,.85);backdrop-filter:blur(10px)}
+        #result-screen.active{display:flex}
+        #replay-overlay{position:fixed;inset:0;display:none;z-index:180;pointer-events:none}
+        #replay-overlay.active{display:block}
+        #replay-label{position:absolute;top:30px;left:50%;transform:translateX(-50%);font-size:16px;font-weight:700;letter-spacing:3px;color:rgba(255,255,255,.7);text-transform:uppercase}
+        #replay-leaderboard{position:absolute;right:30px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.7);backdrop-filter:blur(8px);border-radius:16px;padding:20px 24px;min-width:280px;border:1px solid rgba(255,255,255,.1)}
+        #replay-leaderboard h3{margin:0 0 14px;font-size:14px;color:#888;text-transform:uppercase;letter-spacing:2px;text-align:center}
+        .lb-entry{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+        .lb-entry:last-child{border-bottom:none}
+        .lb-pos{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:rgba(255,255,255,.1);color:#fff;flex-shrink:0}
+        .lb-entry:nth-child(2) .lb-pos{background:#f7c948;color:#000}
+        .lb-entry:nth-child(3) .lb-pos{background:#c0c0c0;color:#000}
+        .lb-entry:nth-child(4) .lb-pos{background:#cd7f32;color:#000}
+        .lb-name{flex:1;font-size:14px;font-weight:600;color:#ddd}
+        .lb-name.is-player{color:#ff6b35}
+        .lb-time{font-size:14px;font-weight:700;color:#aaa;font-variant-numeric:tabular-nums}
+        .lb-time.finished{color:#fff}
+        #replay-skip{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);pointer-events:all;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;padding:10px 32px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;letter-spacing:1px}
+        #replay-skip:hover{background:rgba(255,255,255,.25)}
+        .result-position{font-size:80px;font-weight:900}
+        .result-gold{color:#f7c948}.result-silver{color:#c0c0c0}.result-bronze{color:#cd7f32}.result-other{color:#ff6b35}
+        .result-text{font-size:28px;margin:10px 0 30px;color:#aaa}
+        .result-stats{display:flex;gap:30px;margin-bottom:30px}
+        .result-stat{text-align:center}
+        .result-stat-val{font-size:28px;font-weight:700;color:#ff6b35}
+        .result-stat-label{font-size:12px;color:#666;text-transform:uppercase}
+        .level-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+        .level-easy{background:#2ecc71;color:#000}.level-medium{background:#f39c12;color:#000}.level-hard{background:#e74c3c;color:#fff}.level-extreme{background:#9b59b6;color:#fff}
+        .card.locked{opacity:.4;pointer-events:none}
+        .lock-icon{font-size:28px;color:#666}
+        #controls-help{position:fixed;bottom:20px;left:20px;z-index:50;display:none;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);border-radius:12px;padding:12px 16px;font-size:12px;border:1px solid rgba(255,255,255,.1)}
+        #controls-help.active{display:block}
+        .control-key{display:inline-block;padding:2px 8px;background:rgba(255,255,255,.15);border-radius:4px;font-weight:700;margin:0 2px}
+        #pause-screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:200;background:rgba(0,0,0,.8);backdrop-filter:blur(10px)}
+        #pause-screen.active{display:flex}
+        .progress-container{width:300px;margin:10px auto}
+        .progress-bar{height:8px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden}
+        .progress-fill{height:100%;background:linear-gradient(90deg,#ff6b35,#f7c948);border-radius:4px;transition:width .5s}
+        .progress-label{font-size:12px;color:#888;margin-top:4px}
+        .login-box{background:rgba(20,20,40,.95);border:1px solid rgba(255,107,53,.3);border-radius:14px;padding:24px;max-width:320px;width:90%;text-align:center}
+        .login-box h2{color:#ff6b35;font-size:22px;margin-bottom:4px}
+        .login-box p{color:#888;margin-bottom:12px;font-size:12px}
+        .login-box .menu-btn{width:100%;margin:4px 0}
+        .login-input{width:100%;padding:10px 12px;margin-bottom:8px;border:1px solid rgba(255,255,255,.15);border-radius:10px;background:rgba(255,255,255,.08);color:#fff;font-size:16px;outline:none;transition:border-color .2s}
+        .login-input:focus{border-color:#ff6b35}
+        .login-input::placeholder{color:#666}
+        .login-error{color:#ff4444;font-size:13px;margin-bottom:10px;min-height:18px}
+        .user-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,107,53,.15);border:1px solid rgba(255,107,53,.3);border-radius:20px;padding:4px 14px 4px 10px;font-size:13px;color:#ff6b35;margin-bottom:12px}
+        .user-badge .avatar{width:22px;height:22px;border-radius:50%;background:#ff6b35;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold}
+        .logout-btn{background:none;border:none;color:#666;font-size:12px;cursor:pointer;margin-left:6px}
+        .logout-btn:hover{color:#ff4444}
+    </style>
+</head>
+<body>
+<canvas id="renderCanvas"></canvas>
+<div id="login-screen" class="screen active">
+    <div class="login-box">
+        <h2>MK4 RACER</h2>
+        <p id="login-subtitle">Welcome, racer!</p>
+        <div id="login-tabs" style="display:flex;gap:0;margin-bottom:16px;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.15);">
+            <button id="tab-signin" onclick="switchTab('signin')" style="flex:1;padding:8px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:#ff6b35;color:#fff;">SIGN IN</button>
+            <button id="tab-signup" onclick="switchTab('signup')" style="flex:1;padding:8px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:rgba(255,255,255,0.08);color:#888;">SIGN UP</button>
+        </div>
+        <input type="text" class="login-input" id="login-username" placeholder="Username" maxlength="20" autocomplete="off">
+        <input type="password" class="login-input" id="login-password" placeholder="Password" maxlength="30">
+        <div id="confirm-password-row" style="display:none;"><input type="password" class="login-input" id="login-confirm" placeholder="Confirm Password" maxlength="30"></div>
+        <div class="login-error" id="login-error"></div>
+        <button class="menu-btn primary" id="login-btn" onclick="handleLogin()" style="width:100%;">Sign In</button>
+    </div>
+</div>
+<div id="main-menu" class="screen">
+    <div class="game-title">MK4 RACER</div>
+    <div class="game-subtitle">3D Racing Championship</div>
+    <div class="user-badge" id="user-badge"><div class="avatar" id="user-avatar">?</div><span id="user-display-name">Player</span><button class="logout-btn" onclick="logout()">[logout]</button></div>
+    <div style="margin-bottom:20px"><div class="progress-container"><div style="color:#aaa;font-size:13px;margin-bottom:4px">Level Progress: <span id="player-level">Beginner</span></div><div class="progress-bar"><div class="progress-fill" id="level-progress" style="width:0%"></div></div><div class="progress-label"><span id="xp-text">0 / 100 XP</span></div></div></div>
+    <button class="menu-btn primary" onclick="showScreen('car-select')">Start Race</button>
+    <button class="menu-btn secondary" onclick="showScreen('how-to-play')">How to Play</button>
+</div>
+<div id="how-to-play" class="screen">
+    <div class="section-title">How to Play</div>
+    <div style="max-width:500px;text-align:left;margin:12px 0;line-height:1.8;font-size:14px">
+        <div><span class="control-key">W</span> / <span class="control-key">&uarr;</span> Accelerate</div>
+        <div><span class="control-key">S</span> / <span class="control-key">&darr;</span> Brake/Reverse</div>
+        <div><span class="control-key">A</span> / <span class="control-key">&larr;</span> Steer Left</div>
+        <div><span class="control-key">D</span> / <span class="control-key">&rarr;</span> Steer Right</div>
+        <div><span class="control-key">Space</span> Handbrake</div>
+        <div><span class="control-key">P</span> Drift Mode</div>
+        <div><span class="control-key">Shift</span> Nitro</div>
+        <div><span class="control-key">C</span> Camera</div>
+        <div><span class="control-key">Esc</span> Pause</div>
+        <br><div style="color:#f7c948;font-weight:700">Race Tips:</div>
+        <div style="color:#aaa">Win races to earn XP and unlock new cars, tracks, and harder levels!</div>
+    </div>
+    <button class="menu-btn secondary" onclick="showScreen('main-menu')">Back</button>
+</div>
+<div id="car-select" class="screen">
+    <div class="section-title">Choose Your Car</div>
+    <div class="section-subtitle">Pick your ride</div>
+    <div class="selection-grid" id="car-grid"></div>
+    <div><div style="color:#aaa;margin-bottom:8px">Car Color</div><div class="color-picker" id="color-picker"></div></div>
+    <div style="margin-top:20px"><button class="menu-btn primary" onclick="showScreen('track-select')">Next</button><button class="menu-btn secondary" onclick="showScreen('main-menu')">Back</button></div>
+</div>
+<div id="track-select" class="screen">
+    <div class="section-title">Choose Track</div>
+    <div class="section-subtitle">Where do you want to race?</div>
+    <div class="selection-grid" id="track-grid"></div>
+    <div style="margin-top:20px"><button class="menu-btn primary" onclick="showScreen('race-config')">Next</button><button class="menu-btn secondary" onclick="showScreen('car-select')">Back</button></div>
+</div>
+<div id="race-config" class="screen">
+    <div class="section-title">Race Setup</div>
+    <div class="section-subtitle">Configure your race</div>
+    <div style="text-align:left;max-width:400px">
+        <div style="margin:15px 0"><label style="color:#aaa;font-size:14px">Number of Laps</label><div style="display:flex;gap:10px;margin-top:8px"><button class="menu-btn secondary lap-btn" onclick="setLaps(2)" data-laps="2">2</button><button class="menu-btn secondary lap-btn" onclick="setLaps(3)" data-laps="3" style="border-color:#ff6b35">3</button><button class="menu-btn secondary lap-btn" onclick="setLaps(5)" data-laps="5">5</button></div></div>
+        <div style="margin:15px 0"><label style="color:#aaa;font-size:14px">Opponents</label><div style="display:flex;gap:10px;margin-top:8px"><button class="menu-btn secondary opp-btn" onclick="setOpponents(3)" data-opp="3">3</button><button class="menu-btn secondary opp-btn" onclick="setOpponents(5)" data-opp="5" style="border-color:#ff6b35">5</button><button class="menu-btn secondary opp-btn" onclick="setOpponents(7)" data-opp="7">7</button></div></div>
+        <div style="margin:15px 0"><label style="color:#aaa;font-size:14px">Difficulty</label><div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap" id="difficulty-btns"></div></div>
+    </div>
+    <div style="margin-top:25px"><button class="menu-btn primary" onclick="startRace()">Start Race!</button><button class="menu-btn secondary" onclick="showScreen('track-select')">Back</button></div>
+</div>
+<div id="countdown"></div>
+<div id="hud">
+    <div class="hud-panel"><div class="hud-speed" id="hud-speed">0</div><div class="hud-speed-unit">KM/H</div><div id="drift-indicator" style="display:none;color:#ff6b35;font-weight:bold;font-size:14px;margin-top:4px;text-shadow:0 0 8px #ff6b35">DRIFT</div><div style="margin-top:8px"><div class="hud-label">Nitro</div><div class="stat-bar" style="width:120px"><div class="stat-fill" id="nitro-bar" style="width:100%"></div></div></div></div>
+    <div style="text-align:center"><div class="hud-panel"><div class="hud-label">Lap</div><div class="hud-value hud-lap"><span id="hud-lap">1</span> / <span id="hud-total-laps">3</span></div></div></div>
+    <div style="text-align:right"><div class="hud-panel"><div class="hud-label">Position</div><div class="hud-value hud-pos" id="hud-position">1st</div><div style="margin-top:5px"><div class="hud-label">Time</div><div class="hud-value hud-time" id="hud-time">0:00</div></div></div></div>
+</div>
+<div id="positions-panel"></div>
+<div id="controls-help"><span class="control-key">W</span><span class="control-key">A</span><span class="control-key">S</span><span class="control-key">D</span> Move <span class="control-key">Space</span> Brake <span class="control-key">P</span> Drift <span class="control-key">Shift</span> Nitro <span class="control-key">C</span> Camera</div>
+<canvas id="minimap" width="180" height="180"></canvas>
+<div id="pause-screen"><div class="section-title">Paused</div><div style="margin-top:20px"><button class="menu-btn primary" onclick="resumeRace()">Resume</button><button class="menu-btn secondary" onclick="quitRace()">Quit to Menu</button></div></div>
+<div id="replay-overlay">
+    <div id="replay-label">REPLAY</div>
+    <div id="replay-leaderboard">
+        <h3>Race Results</h3>
+        <div id="replay-lb-entries"></div>
+    </div>
+    <button id="replay-skip" onclick="skipReplay()">Skip Replay</button>
+</div>
+
+<div id="result-screen">
+    <div id="result-position" class="result-position"></div>
+    <div id="result-text" class="result-text"></div>
+    <div class="result-stats"><div class="result-stat"><div class="result-stat-val" id="result-time">0:00</div><div class="result-stat-label">Total Time</div></div><div class="result-stat"><div class="result-stat-val" id="result-best-lap">0:00</div><div class="result-stat-label">Best Lap</div></div><div class="result-stat"><div class="result-stat-val" id="result-top-speed">0</div><div class="result-stat-label">Top Speed</div></div><div class="result-stat"><div class="result-stat-val" id="result-xp">+0 XP</div><div class="result-stat-label">Earned</div></div></div>
+    <button class="menu-btn primary" onclick="quitRace()">Continue</button>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/login.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/cars.js"></script>
+<script src="js/track.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/hud.js"></script>
+<script src="js/physics.js"></script>
+<script src="js/race.js"></script>
+<script src="js/input.js"></script>
+<!-- Inline code removed — all game logic is in js/ files -->
+<script>
+</script>
+</body>
+</html>
