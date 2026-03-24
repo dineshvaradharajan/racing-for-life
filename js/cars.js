@@ -230,10 +230,11 @@ function cloneModelInto(parentNode, originalMeshes, modelInfo, color) {
     if (modelInfo.fixRotation) {
         meshParent = new BABYLON.TransformNode(uid('modelFix'), scene);
         meshParent.parent = parentNode;
-        // Ferrari model: correct orientation
-        meshParent.rotation.x = Math.PI;
-        meshParent.rotation.y = Math.PI / 2;
-        meshParent.rotation.z = -Math.PI / 2;
+        // Ferrari model: correct orientation using quaternion
+        // Rotate -90° around X to lay flat, then 180° around Y to face forward
+        const qX = BABYLON.Quaternion.RotationAxis(new BABYLON.Vector3(1, 0, 0), -Math.PI / 2);
+        const qY = BABYLON.Quaternion.RotationAxis(new BABYLON.Vector3(0, 1, 0), Math.PI);
+        meshParent.rotationQuaternion = qY.multiply(qX);
     }
 
     originalMeshes.forEach((mesh, idx) => {
