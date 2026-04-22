@@ -148,6 +148,13 @@ function showScreen(id) {
     if (id === 'car-select') buildCarSelect();
     if (id === 'track-select') buildTrackSelect();
     if (id === 'race-config') buildRaceConfig();
+
+    // Spin up / tear down the 3D preview alongside the car-select screen
+    if (id === 'car-select') {
+        if (typeof initCarPreview === 'function') initCarPreview();
+    } else {
+        if (typeof disposeCarPreview === 'function') disposeCarPreview();
+    }
 }
 
 function updateMainMenu() {
@@ -289,17 +296,11 @@ function buildCarSelect() {
         grid.appendChild(div);
     });
 
-    // Large preview of the currently-selected car
+    // Update the 3D rotating preview + its name label
     const selected = CARS[GameState.selectedCar];
-    const previewEl = document.getElementById('car-preview-svg');
     const previewName = document.getElementById('car-preview-name');
-    if (previewEl && selected) {
-        const selectedLocked = GameState.xp < selected.unlock;
-        previewEl.innerHTML = selectedLocked
-            ? '<div style="text-align:center;padding:30px;color:#666;font-size:48px">&#128274;</div>'
-            : carSvg(selected.style, GameState.selectedColor, 'preview');
-    }
     if (previewName && selected) previewName.textContent = selected.name;
+    if (typeof updateCarPreview === 'function') updateCarPreview();
 
     const cp = document.getElementById('color-picker');
     cp.innerHTML = '';
