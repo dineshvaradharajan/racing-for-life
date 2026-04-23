@@ -19,7 +19,7 @@ const CAR_MODELS = {
     'gt':         { file: 'models/camaro-zl1.glb',       scale: 1.0, yOffset: 0, rotationY: 0},
     'supra4':     { file: 'models/toyota-ae86.glb',      scale: 1.0, yOffset: 0, rotationY: 0},
     'supra5':     { file: 'models/mazda-rx7.glb',        scale: 1.0, yOffset: 0, rotationY: 0},
-    'bugatti':    { file: 'models/rolls-royce.glb',      scale: 1.0, yOffset: 0, rotationY: 0},
+    'bugatti':    { file: 'models/car-concept.glb',      scale: 1.0, yOffset: 0, rotationY: 0},
 };
 
 // Cache loaded models

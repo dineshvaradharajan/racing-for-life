@@ -25,6 +25,8 @@ under Creative Commons licenses. Attribution is provided below per the CC-BY ter
   https://poly.pizza/m/1uZKezeldGG
 - `rolls-royce.glb` — "Rolls Royce" by David Sirera (CC-BY)
   https://poly.pizza/m/3DtJTlxgO_U
+- `car-concept.glb` — "CarConcept" by KhronosGroup (CC0, glTF Sample Assets, PBR)
+  https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CarConcept
 
 The earlier Kenney-style `.glb` files in this folder (`race.glb`, `sedan.glb`,
 `hatchback-sports.glb`, etc.) are from Kenney (kenney.nl) under CC0 and remain
