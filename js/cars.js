@@ -5,18 +5,18 @@
 let _carPartId = 0;
 function uid(prefix) { return prefix + '_' + (++_carPartId); }
 
-// Map car styles to GLB model files
+// Map car styles to GLB model files (higher-poly CC-BY models from Poly Pizza)
 const CAR_MODELS = {
-    'ferrari':    { file: 'models/ferrari.glb', scale: 1.2, yOffset: 0, fixRotation: true },
-    'lambo':      { file: 'models/sedan-sports.glb', scale: 3.5, yOffset: 0 },
+    'ferrari':    { file: 'models/ferrari-f40.glb',      scale: 1.6, yOffset: 0 },
+    'lambo':      { file: 'models/sportster.glb',        scale: 1.0, yOffset: 0 },
     'hatchback':  { file: 'models/hatchback-sports.glb', scale: 3.5, yOffset: 0 },
-    'muscle':     { file: 'models/race.glb', scale: 3.5, yOffset: 0 },
-    'f1':         { file: 'models/race-future.glb', scale: 3.5, yOffset: 0 },
-    'koenigsegg': { file: 'models/sedan-sports.glb', scale: 3.5, yOffset: 0 },
-    'gt':         { file: 'models/race.glb', scale: 3.5, yOffset: 0 },
-    'supra4':     { file: 'models/sedan.glb', scale: 3.5, yOffset: 0 },
-    'supra5':     { file: 'models/sedan-sports.glb', scale: 3.5, yOffset: 0 },
-    'bugatti':    { file: 'models/sedan-sports.glb', scale: 3.5, yOffset: 0 },
+    'muscle':     { file: 'models/dodge-challenger.glb', scale: 1.0, yOffset: 0 },
+    'f1':         { file: 'models/delorean.glb',         scale: 1.0, yOffset: 0 },
+    'koenigsegg': { file: 'models/nissan-gtr.glb',       scale: 1.0, yOffset: 0 },
+    'gt':         { file: 'models/camaro-zl1.glb',       scale: 1.0, yOffset: 0 },
+    'supra4':     { file: 'models/toyota-ae86.glb',      scale: 1.0, yOffset: 0 },
+    'supra5':     { file: 'models/mazda-rx7.glb',        scale: 1.0, yOffset: 0 },
+    'bugatti':    { file: 'models/rolls-royce.glb',      scale: 1.0, yOffset: 0 },
 };
 
 // Cache loaded models

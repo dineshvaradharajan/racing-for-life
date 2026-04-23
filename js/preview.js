@@ -30,11 +30,13 @@ function initCarPreview() {
             'previewCam',
             -Math.PI / 2 - 0.45,
             Math.PI / 2 - 0.22,
-            9.5,
+            12,
             new BABYLON.Vector3(0, 0.6, 0),
             _previewScene
         );
-        _previewCamera.fov = 0.75;
+        _previewCamera.fov = 0.8;
+        _previewCamera.lowerRadiusLimit = 3;
+        _previewCamera.upperRadiusLimit = 30;
         _previewCamera.minZ = 0.1;
         _previewCamera.maxZ = 60;
 
@@ -252,11 +254,41 @@ function _loadPreviewCar(style, color) {
             }
         });
 
-        // Apply the in-game scale so the car is the right size in the scene
+        // Apply the in-game scale as a starting point, then auto-fit to the turntable
         const s = modelInfo.scale || 1;
         rootNode.scaling.set(s, s, s);
-        // The Kenney GLB pivots are at the wheels, so place pivot at floor
-        rootNode.position.y = -0.5 + (modelInfo.yOffset || 0);
+        rootNode.position.y = 0;
+
+        // Two-pass auto-fit: refresh world matrices, compute bounds, then
+        // rescale so the car is ~4 units long and translate so it sits on the floor
+        requestAnimationFrame(() => {
+            if (_previewCarRoot !== rootNode) return;
+            rootNode.computeWorldMatrix(true);
+            rootNode.getChildMeshes(false).forEach(m => {
+                if (m.refreshBoundingInfo) m.refreshBoundingInfo();
+                if (m.computeWorldMatrix) m.computeWorldMatrix(true);
+            });
+            const b = _previewComputeBounds(rootNode);
+            if (!b) return;
+            const maxDim = Math.max(b.size.x, b.size.y, b.size.z);
+            const targetLen = 4.2;
+            if (maxDim > 0.01) {
+                const factor = targetLen / maxDim;
+                rootNode.scaling.set(s * factor, s * factor, s * factor);
+                rootNode.computeWorldMatrix(true);
+                rootNode.getChildMeshes(false).forEach(m => {
+                    if (m.refreshBoundingInfo) m.refreshBoundingInfo();
+                    if (m.computeWorldMatrix) m.computeWorldMatrix(true);
+                });
+                const b2 = _previewComputeBounds(rootNode);
+                if (b2) {
+                    rootNode.position.y = -0.5 - b2.min.y;
+                    rootNode.position.x = -((b2.min.x + b2.max.x) / 2);
+                    rootNode.position.z = -((b2.min.z + b2.max.z) / 2);
+                }
+            }
+            console.log('[preview] fit', fileName, 'maxDim=', maxDim.toFixed(2));
+        });
     }, null, (_scene, message, exception) => {
         console.warn('[preview] GLB load failed for ' + style + ':', message, exception);
     });
