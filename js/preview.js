@@ -30,11 +30,11 @@ function initCarPreview() {
             'previewCam',
             -Math.PI / 2 - 0.45,
             Math.PI / 2 - 0.22,
-            6.2,
-            new BABYLON.Vector3(0, 0.35, 0),
+            9.5,
+            new BABYLON.Vector3(0, 0.6, 0),
             _previewScene
         );
-        _previewCamera.fov = 0.72;
+        _previewCamera.fov = 0.75;
         _previewCamera.minZ = 0.1;
         _previewCamera.maxZ = 60;
 
@@ -99,9 +99,9 @@ function initCarPreview() {
         dome.infiniteDistance = true;
 
         // ── Turntable floor — matte, low-reflectance ──
-        const floor = BABYLON.MeshBuilder.CreateDisc('pfloor', { radius: 3.2, tessellation: 64 }, _previewScene);
+        const floor = BABYLON.MeshBuilder.CreateDisc('pfloor', { radius: 4.8, tessellation: 72 }, _previewScene);
         floor.rotation.x = Math.PI / 2;
-        floor.position.y = -0.5;
+        floor.position.y = -0.52;
         const floorMat = new BABYLON.StandardMaterial('pfloorMat', _previewScene);
         floorMat.diffuseColor = new BABYLON.Color3(0.04, 0.04, 0.08);
         floorMat.specularColor = new BABYLON.Color3(0.04, 0.04, 0.06);
@@ -109,15 +109,15 @@ function initCarPreview() {
         floor.material = floorMat;
 
         // Orange + cyan unlit glow rings
-        const ring = BABYLON.MeshBuilder.CreateTorus('pring', { diameter: 5.4, thickness: 0.045, tessellation: 64 }, _previewScene);
-        ring.position.y = -0.47;
+        const ring = BABYLON.MeshBuilder.CreateTorus('pring', { diameter: 8.4, thickness: 0.07, tessellation: 72 }, _previewScene);
+        ring.position.y = -0.49;
         const ringMat = new BABYLON.StandardMaterial('pringMat', _previewScene);
         ringMat.disableLighting = true;
         ringMat.emissiveColor = new BABYLON.Color3(1, 0.45, 0.18);
         ring.material = ringMat;
 
-        const ring2 = BABYLON.MeshBuilder.CreateTorus('pring2', { diameter: 4.2, thickness: 0.02, tessellation: 64 }, _previewScene);
-        ring2.position.y = -0.48;
+        const ring2 = BABYLON.MeshBuilder.CreateTorus('pring2', { diameter: 6.6, thickness: 0.03, tessellation: 72 }, _previewScene);
+        ring2.position.y = -0.50;
         const ring2Mat = new BABYLON.StandardMaterial('pring2Mat', _previewScene);
         ring2Mat.disableLighting = true;
         ring2Mat.emissiveColor = new BABYLON.Color3(0.25, 0.8, 1);
@@ -167,248 +167,101 @@ function initCarPreview() {
     updateCarPreview();
 }
 
-// ── Procedural car builder — one root TransformNode per car ──
-function _buildPreviewCar(style, color) {
-    const scene = _previewScene;
-    const root = new BABYLON.TransformNode('previewCar', scene);
+// ── GLB model loader — mirrors cars.js cloneModelInto pattern exactly ──
+function _loadPreviewCar(style, color) {
+    const modelInfo = CAR_MODELS[style];
+    if (!modelInfo) return null;
+
+    const rootNode = new BABYLON.TransformNode('previewCar_' + style, _previewScene);
     _previewBodyMaterials = [];
 
-    // Style configs — dimensions in world units
-    const CFG = {
-        supercar:  { L: 3.2, W: 1.55, H: 0.6,  roofL: 1.6, roofOfs: 0.1,  roofH: 0.45, nose: 'sharp',  spoiler: 'lip',  wheelR: 0.38, wheelAxle: 0.4 },
-        lambo:     { L: 3.2, W: 1.65, H: 0.55, roofL: 1.5, roofOfs: 0.15, roofH: 0.42, nose: 'wedge',  spoiler: 'lip',  wheelR: 0.4,  wheelAxle: 0.4 },
-        muscle:    { L: 3.4, W: 1.6,  H: 0.75, roofL: 1.3, roofOfs: -0.1, roofH: 0.55, nose: 'flat',   spoiler: 'big',  wheelR: 0.42, wheelAxle: 0.45 },
-        f1:        { L: 3.5, W: 0.8,  H: 0.3,  roofL: 0.6, roofOfs: 0.0,  roofH: 0.3,  nose: 'cone',   spoiler: 'f1',   wheelR: 0.45, wheelAxle: 0.55, open: true },
-        hatchback: { L: 2.6, W: 1.5,  H: 0.85, roofL: 1.5, roofOfs: 0.0,  roofH: 0.65, nose: 'flat',   spoiler: 'none', wheelR: 0.35, wheelAxle: 0.38 },
-        jdm:       { L: 3.2, W: 1.55, H: 0.65, roofL: 1.5, roofOfs: 0.0,  roofH: 0.5,  nose: 'sharp',  spoiler: 'big',  wheelR: 0.38, wheelAxle: 0.4 },
-        hyper:     { L: 3.3, W: 1.6,  H: 0.58, roofL: 1.5, roofOfs: 0.05, roofH: 0.42, nose: 'curve',  spoiler: 'wing', wheelR: 0.4,  wheelAxle: 0.42 },
-    };
-    // Map style → config key
-    const styleMap = {
-        ferrari: 'supercar', koenigsegg: 'supercar', gt: 'supercar',
-        lambo: 'lambo',
-        muscle: 'muscle',
-        f1: 'f1',
-        hatchback: 'hatchback',
-        supra4: 'jdm', supra5: 'jdm',
-        bugatti: 'hyper',
-    };
-    const cfg = CFG[styleMap[style] || 'supercar'];
-
-    const parsed = BABYLON.Color3.FromHexString(color);
-
-    // Paint material — reflective clear-coat
-    function paintMat(tag) {
-        const m = new BABYLON.StandardMaterial('pcarPaint_' + tag + '_' + Math.random().toString(36).slice(2,6), scene);
-        m.diffuseColor = parsed;
-        m.specularColor = new BABYLON.Color3(0.95, 0.95, 0.95);
-        m.specularPower = 140;
-        m.emissiveColor = parsed.scale(0.05);
-        if (scene.environmentTexture) {
-            m.reflectionTexture = scene.environmentTexture;
-            m.reflectionTexture.level = 0.55;
-            m.reflectionFresnelParameters = new BABYLON.FresnelParameters();
-            m.reflectionFresnelParameters.leftColor = new BABYLON.Color3(1, 1, 1);
-            m.reflectionFresnelParameters.rightColor = new BABYLON.Color3(0.08, 0.08, 0.08);
-            m.reflectionFresnelParameters.power = 1.6;
-        }
-        _previewBodyMaterials.push(m);
-        return m;
+    let meshTarget = rootNode;
+    if (modelInfo.fixRotation) {
+        const inner = new BABYLON.TransformNode('previewFix', _previewScene);
+        inner.parent = rootNode;
+        inner.rotation.x = Math.PI / 2;
+        meshTarget = inner;
     }
 
-    const glassMat = new BABYLON.StandardMaterial('pglassMat_' + Math.random().toString(36).slice(2,6), scene);
-    glassMat.diffuseColor = new BABYLON.Color3(0.05, 0.07, 0.12);
-    glassMat.specularColor = new BABYLON.Color3(0.95, 0.95, 1);
-    glassMat.specularPower = 200;
-    glassMat.alpha = 0.55;
-    glassMat.emissiveColor = new BABYLON.Color3(0.02, 0.03, 0.06);
-    if (scene.environmentTexture) {
-        glassMat.reflectionTexture = scene.environmentTexture;
-        glassMat.reflectionTexture.level = 0.5;
-    }
+    const lastSlash = modelInfo.file.lastIndexOf('/');
+    const rootUrl  = lastSlash >= 0 ? modelInfo.file.substring(0, lastSlash + 1) : './';
+    const fileName = lastSlash >= 0 ? modelInfo.file.substring(lastSlash + 1) : modelInfo.file;
 
-    const tireMat = new BABYLON.StandardMaterial('ptireMat_' + Math.random().toString(36).slice(2,6), scene);
-    tireMat.diffuseColor = new BABYLON.Color3(0.05, 0.05, 0.06);
-    tireMat.specularColor = new BABYLON.Color3(0.08, 0.08, 0.1);
-    tireMat.specularPower = 20;
-
-    const rimMat = new BABYLON.StandardMaterial('primMat_' + Math.random().toString(36).slice(2,6), scene);
-    rimMat.diffuseColor = new BABYLON.Color3(0.75, 0.77, 0.82);
-    rimMat.specularColor = new BABYLON.Color3(1, 1, 1);
-    rimMat.specularPower = 220;
-    rimMat.emissiveColor = new BABYLON.Color3(0.05, 0.05, 0.06);
-    if (scene.environmentTexture) {
-        rimMat.reflectionTexture = scene.environmentTexture;
-        rimMat.reflectionTexture.level = 0.7;
-    }
-
-    const headlightMat = new BABYLON.StandardMaterial('pheadMat_' + Math.random().toString(36).slice(2,6), scene);
-    headlightMat.disableLighting = true;
-    headlightMat.emissiveColor = new BABYLON.Color3(1, 0.95, 0.75);
-
-    const tailLightMat = new BABYLON.StandardMaterial('ptailMat_' + Math.random().toString(36).slice(2,6), scene);
-    tailLightMat.disableLighting = true;
-    tailLightMat.emissiveColor = new BABYLON.Color3(1, 0.12, 0.08);
-
-    // ── Main body — lower chassis ──
-    if (!cfg.open) {
-        const body = BABYLON.MeshBuilder.CreateBox('pbody', { width: cfg.W, depth: cfg.L, height: cfg.H }, scene);
-        body.position.y = cfg.wheelR + cfg.H / 2 - 0.05;
-        body.parent = root;
-        body.material = paintMat('body');
-        // Nose tapering
-        if (cfg.nose === 'sharp' || cfg.nose === 'wedge' || cfg.nose === 'curve') {
-            // Add a nose cone
-            const nose = BABYLON.MeshBuilder.CreateBox('pnose', { width: cfg.W * 0.9, depth: 0.5, height: cfg.H * 0.65 }, scene);
-            nose.position.set(0, body.position.y - 0.05, cfg.L / 2 + 0.15);
-            nose.parent = root;
-            nose.material = paintMat('nose');
-            nose.scaling.z = 0.7;
+    BABYLON.SceneLoader.ImportMesh('', rootUrl, fileName, _previewScene, (meshes) => {
+        if (_previewCarRoot !== rootNode) {
+            meshes.forEach(m => { try { m.dispose(); } catch(e) {} });
+            return;
         }
-        // Hood
-        const hood = BABYLON.MeshBuilder.CreateBox('phood', { width: cfg.W * 0.92, depth: cfg.L * 0.32, height: 0.1 }, scene);
-        hood.position.set(0, body.position.y + cfg.H / 2 - 0.02, cfg.L * 0.25);
-        hood.parent = root;
-        hood.material = paintMat('hood');
+        console.log('[preview] GLB loaded:', fileName, 'meshes:', meshes.length);
 
-        // Roof / cabin
-        const roof = BABYLON.MeshBuilder.CreateBox('proof', { width: cfg.W * 0.85, depth: cfg.roofL, height: cfg.roofH }, scene);
-        roof.position.set(0, body.position.y + cfg.H / 2 + cfg.roofH / 2 - 0.05, cfg.roofOfs);
-        roof.parent = root;
-        roof.material = paintMat('roof');
+        // Hide the GLB's original meshes — we render cloned copies
+        meshes.forEach(m => {
+            if (m.setEnabled) m.setEnabled(false);
+            m.isVisible = false;
+        });
 
-        // Windshield / windows — sit inside roof box
-        const glass = BABYLON.MeshBuilder.CreateBox('pglass', { width: cfg.W * 0.87, depth: cfg.roofL * 0.92, height: cfg.roofH * 0.75 }, scene);
-        glass.position.set(0, roof.position.y + 0.03, cfg.roofOfs);
-        glass.parent = root;
-        glass.material = glassMat;
+        const parsedColor = BABYLON.Color3.FromHexString(color);
 
-        // Front bumper / grille accent
-        const grille = BABYLON.MeshBuilder.CreateBox('pgrille', { width: cfg.W * 0.7, depth: 0.06, height: 0.15 }, scene);
-        grille.position.set(0, body.position.y - cfg.H * 0.15, cfg.L / 2 + 0.02);
-        grille.parent = root;
-        const grilleMat = new BABYLON.StandardMaterial('pgrilleMat', scene);
-        grilleMat.diffuseColor = new BABYLON.Color3(0.04, 0.04, 0.06);
-        grilleMat.specularColor = new BABYLON.Color3(0.3, 0.3, 0.35);
-        grille.material = grilleMat;
+        meshes.forEach((mesh, idx) => {
+            if (mesh.getClassName && mesh.getClassName() === 'TransformNode' && idx === 0) return;
 
-        // Headlights
-        for (const sign of [-1, 1]) {
-            const hl = BABYLON.MeshBuilder.CreateBox('phl', { width: 0.25, depth: 0.08, height: 0.12 }, scene);
-            hl.position.set(sign * cfg.W * 0.33, body.position.y + cfg.H * 0.15, cfg.L / 2 + 0.03);
-            hl.parent = root;
-            hl.material = headlightMat;
-        }
-        // Tail lights
-        for (const sign of [-1, 1]) {
-            const tl = BABYLON.MeshBuilder.CreateBox('ptl', { width: 0.3, depth: 0.06, height: 0.1 }, scene);
-            tl.position.set(sign * cfg.W * 0.32, body.position.y + cfg.H * 0.1, -cfg.L / 2 - 0.02);
-            tl.parent = root;
-            tl.material = tailLightMat;
-        }
-    } else {
-        // ── F1 open-wheel car ──
-        const tub = BABYLON.MeshBuilder.CreateBox('pf1tub', { width: cfg.W, depth: cfg.L * 0.7, height: cfg.H }, scene);
-        tub.position.set(0, cfg.wheelR + cfg.H / 2, -cfg.L * 0.05);
-        tub.parent = root;
-        tub.material = paintMat('tub');
+            let clone;
+            try { clone = mesh.clone('pc_' + idx + '_' + Math.random().toString(36).slice(2,6)); }
+            catch (e) { try { clone = mesh.createInstance('pci_' + idx); } catch (e2) { clone = null; } }
+            if (!clone) return;
 
-        // Nose cone (long, tapering)
-        const nose = BABYLON.MeshBuilder.CreateBox('pf1nose', { width: cfg.W * 0.5, depth: cfg.L * 0.35, height: cfg.H * 0.7 }, scene);
-        nose.position.set(0, tub.position.y - 0.02, cfg.L * 0.45);
-        nose.parent = root;
-        nose.material = paintMat('nose');
-        nose.scaling.x = 0.5;
+            clone.parent = meshTarget;
+            clone.isVisible = true;
+            if (clone.setEnabled) clone.setEnabled(true);
 
-        // Front wing
-        const fWing = BABYLON.MeshBuilder.CreateBox('pf1fw', { width: cfg.W * 2.2, depth: 0.25, height: 0.06 }, scene);
-        fWing.position.set(0, cfg.wheelR * 0.55, cfg.L * 0.62);
-        fWing.parent = root;
-        fWing.material = paintMat('fwing');
+            // Tint body panels with the selected color (match cars.js heuristic)
+            if (clone.material) {
+                const origMat = clone.material;
+                let mat;
+                try { mat = origMat.clone('pmat_' + idx + '_' + Math.random().toString(36).slice(2,6)); } catch (e) { mat = origMat; }
+                clone.material = mat;
 
-        // Rear wing — tall
-        const rWing = BABYLON.MeshBuilder.CreateBox('pf1rw', { width: cfg.W * 1.9, depth: 0.2, height: 0.1 }, scene);
-        rWing.position.set(0, cfg.wheelR + cfg.H + 0.55, -cfg.L * 0.4);
-        rWing.parent = root;
-        rWing.material = paintMat('rwing');
-        // Wing supports
-        for (const sign of [-1, 1]) {
-            const sup = BABYLON.MeshBuilder.CreateBox('pf1sup', { width: 0.06, depth: 0.1, height: 0.6 }, scene);
-            sup.position.set(sign * 0.22, cfg.wheelR + cfg.H + 0.25, -cfg.L * 0.4);
-            sup.parent = root;
-            sup.material = paintMat('sup');
-        }
-        // Halo (simple arch)
-        const halo = BABYLON.MeshBuilder.CreateTorus('pf1halo', { diameter: cfg.W * 1.2, thickness: 0.05, tessellation: 24 }, scene);
-        halo.position.set(0, tub.position.y + cfg.H * 0.45, cfg.L * 0.05);
-        halo.rotation.x = Math.PI / 2;
-        halo.parent = root;
-        const haloMat = new BABYLON.StandardMaterial('phaloMat', scene);
-        haloMat.diffuseColor = new BABYLON.Color3(0.08, 0.08, 0.1);
-        haloMat.specularColor = new BABYLON.Color3(0.6, 0.6, 0.7);
-        haloMat.specularPower = 160;
-        halo.material = haloMat;
+                let brightness = 0.5;
+                if (mat.diffuseColor) {
+                    brightness = (mat.diffuseColor.r + mat.diffuseColor.g + mat.diffuseColor.b) / 3;
+                }
 
-        // Cockpit opening (dark insert)
-        const cockpit = BABYLON.MeshBuilder.CreateBox('pf1cock', { width: cfg.W * 0.7, depth: cfg.L * 0.18, height: 0.1 }, scene);
-        cockpit.position.set(0, tub.position.y + cfg.H / 2 + 0.04, cfg.L * 0.05);
-        cockpit.parent = root;
-        cockpit.material = glassMat;
-    }
-
-    // Spoilers / wings (non-F1)
-    if (cfg.spoiler === 'big' || cfg.spoiler === 'wing') {
-        const wingW = cfg.W * 1.15;
-        const wing = BABYLON.MeshBuilder.CreateBox('pwing', { width: wingW, depth: 0.18, height: 0.05 }, scene);
-        const baseY = cfg.wheelR + cfg.H + cfg.roofH * 0.1;
-        wing.position.set(0, baseY + (cfg.spoiler === 'wing' ? 0.35 : 0.18), -cfg.L / 2 + 0.05);
-        wing.parent = root;
-        wing.material = paintMat('wing');
-        if (cfg.spoiler === 'wing') {
-            for (const sign of [-1, 1]) {
-                const post = BABYLON.MeshBuilder.CreateBox('pwingpost', { width: 0.05, depth: 0.08, height: 0.28 }, scene);
-                post.position.set(sign * wingW * 0.4, baseY + 0.15, -cfg.L / 2 + 0.05);
-                post.parent = root;
-                post.material = paintMat('post');
+                if (brightness > 0.35 && brightness < 0.95) {
+                    mat.diffuseColor = parsedColor;
+                    mat.specularColor = new BABYLON.Color3(0.85, 0.85, 0.9);
+                    mat.specularPower = 140;
+                    mat.emissiveColor = parsedColor.scale(0.04);
+                    if (_previewScene.environmentTexture) {
+                        mat.reflectionTexture = _previewScene.environmentTexture;
+                        mat.reflectionTexture.level = 0.55;
+                        mat.reflectionFresnelParameters = new BABYLON.FresnelParameters();
+                        mat.reflectionFresnelParameters.leftColor = new BABYLON.Color3(1, 1, 1);
+                        mat.reflectionFresnelParameters.rightColor = new BABYLON.Color3(0.08, 0.08, 0.08);
+                        mat.reflectionFresnelParameters.power = 1.6;
+                    }
+                    _previewBodyMaterials.push(mat);
+                } else if (brightness < 0.25) {
+                    // Darker trim — glass / tires / accents. Polish a little.
+                    mat.specularColor = new BABYLON.Color3(0.5, 0.5, 0.55);
+                    mat.specularPower = 120;
+                    if (_previewScene.environmentTexture) {
+                        mat.reflectionTexture = _previewScene.environmentTexture;
+                        mat.reflectionTexture.level = 0.3;
+                    }
+                }
             }
-        }
-    } else if (cfg.spoiler === 'lip') {
-        const lip = BABYLON.MeshBuilder.CreateBox('plip', { width: cfg.W * 0.9, depth: 0.1, height: 0.04 }, scene);
-        lip.position.set(0, cfg.wheelR + cfg.H + 0.03, -cfg.L / 2 + 0.05);
-        lip.parent = root;
-        lip.material = paintMat('lip');
-    }
+        });
 
-    // ── Wheels ──
-    const wheelZFront = cfg.L * 0.32;
-    const wheelZBack = -cfg.L * 0.3;
-    for (const zSide of [wheelZFront, wheelZBack]) {
-        for (const xSide of [-cfg.wheelAxle - cfg.W * 0.12, cfg.wheelAxle + cfg.W * 0.12]) {
-            const tire = BABYLON.MeshBuilder.CreateCylinder('ptire', { diameter: cfg.wheelR * 2, height: 0.28, tessellation: 32 }, scene);
-            tire.rotation.z = Math.PI / 2;
-            tire.position.set(xSide, cfg.wheelR, zSide);
-            tire.parent = root;
-            tire.material = tireMat;
+        // Apply the in-game scale so the car is the right size in the scene
+        const s = modelInfo.scale || 1;
+        rootNode.scaling.set(s, s, s);
+        // The Kenney GLB pivots are at the wheels, so place pivot at floor
+        rootNode.position.y = -0.5 + (modelInfo.yOffset || 0);
+    }, null, (_scene, message, exception) => {
+        console.warn('[preview] GLB load failed for ' + style + ':', message, exception);
+    });
 
-            const rim = BABYLON.MeshBuilder.CreateCylinder('prim', { diameter: cfg.wheelR * 1.25, height: 0.3, tessellation: 18 }, scene);
-            rim.rotation.z = Math.PI / 2;
-            rim.position.set(xSide, cfg.wheelR, zSide);
-            rim.parent = root;
-            rim.material = rimMat;
-
-            // Brake disc (dark)
-            const disc = BABYLON.MeshBuilder.CreateCylinder('pdisc', { diameter: cfg.wheelR * 1.05, height: 0.1, tessellation: 24 }, scene);
-            disc.rotation.z = Math.PI / 2;
-            disc.position.set(xSide, cfg.wheelR, zSide);
-            disc.parent = root;
-            const discMat = new BABYLON.StandardMaterial('pdiscMat', scene);
-            discMat.diffuseColor = new BABYLON.Color3(0.1, 0.1, 0.12);
-            discMat.specularColor = new BABYLON.Color3(0.5, 0.5, 0.55);
-            disc.material = discMat;
-        }
-    }
-
-    return root;
+    return rootNode;
 }
 
 function updateCarPreview() {
@@ -447,7 +300,7 @@ function updateCarPreview() {
     }
     _previewBodyMaterials = [];
 
-    _previewCarRoot = _buildPreviewCar(style, color);
+    _previewCarRoot = _loadPreviewCar(style, color);
     _previewRotation = 0;
     _previewLoadedStyle = style;
     _previewLoadedColor = color;
