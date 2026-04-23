@@ -343,12 +343,20 @@ function cloneModelInto(parentNode, originalMeshes, modelInfo, color) {
         }
     });
 
-    // Auto-orient (detect and correct non-Y-up models) + auto-fit (normalize
-    // to ~3.2 units long). Runs before any scaling is applied to parentNode.
+    // Auto-fit: normalize car to ~3.2 units along longest axis
     const fitScale = _autoOrientAndFitCar(parentNode, inner, 3.2) * (modelInfo.scale || 1);
     parentNode.scaling = new BABYLON.Vector3(fitScale, fitScale, fitScale);
-    parentNode.position.y += modelInfo.yOffset;
 
+    // Lift the clones so the car's lowest point sits at y=0 in parentNode
+    // local space. Without this, GLBs whose pivot is at the car's center
+    // end up half-buried in the road (physics puts carY at ground level).
+    parentNode.computeWorldMatrix(true);
+    const lifted = _measureCarBounds(parentNode);
+    if (lifted && fitScale > 0) {
+        inner.position.y -= lifted.min.y / fitScale;
+    }
+
+    parentNode.position.y += modelInfo.yOffset;
     _addHeadlightBeams(parentNode, 2.2 * fitScale, 0.5 * fitScale, 5.5 * fitScale, 0.42 * fitScale);
 
     return parentNode;
