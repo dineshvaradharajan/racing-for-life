@@ -28,51 +28,46 @@ function initCarPreview() {
         _previewCamera = new BABYLON.ArcRotateCamera(
             'previewCam',
             -Math.PI / 2 - 0.45,
-            Math.PI / 2 - 0.25,
-            9.2,
-            new BABYLON.Vector3(0, 0.2, 0),
+            Math.PI / 2 - 0.22,
+            6.5,
+            new BABYLON.Vector3(0, 0.4, 0),
             _previewScene
         );
-        _previewCamera.fov = 0.65;
+        _previewCamera.fov = 0.7;
         _previewCamera.minZ = 0.1;
         _previewCamera.maxZ = 60;
 
-        // ── Three-point lighting + colored accent lights ──
-        const hemi = new BABYLON.HemisphericLight('phemi', new BABYLON.Vector3(0, 1, 0.15), _previewScene);
-        hemi.intensity = 0.55;
-        hemi.diffuse = new BABYLON.Color3(1, 0.96, 0.9);
-        hemi.groundColor = new BABYLON.Color3(0.1, 0.08, 0.18);
-        hemi.specular = new BABYLON.Color3(0.4, 0.4, 0.4);
+        // ── Three-point lighting (moderate, car-focused) ──
+        const hemi = new BABYLON.HemisphericLight('phemi', new BABYLON.Vector3(0, 1, 0.2), _previewScene);
+        hemi.intensity = 0.75;
+        hemi.diffuse = new BABYLON.Color3(1, 0.95, 0.88);
+        hemi.groundColor = new BABYLON.Color3(0.15, 0.12, 0.25);
+        hemi.specular = new BABYLON.Color3(0.3, 0.3, 0.35);
 
-        const key = new BABYLON.DirectionalLight('pkey', new BABYLON.Vector3(-0.35, -0.8, -0.55).normalize(), _previewScene);
-        key.intensity = 1.45;
-        key.diffuse = new BABYLON.Color3(1, 0.94, 0.82);
-        key.specular = new BABYLON.Color3(1, 0.94, 0.82);
-        key.position = new BABYLON.Vector3(6, 10, 6);
+        const key = new BABYLON.DirectionalLight('pkey', new BABYLON.Vector3(-0.4, -0.75, -0.5).normalize(), _previewScene);
+        key.intensity = 1.1;
+        key.diffuse = new BABYLON.Color3(1, 0.95, 0.85);
+        key.specular = new BABYLON.Color3(1, 0.95, 0.85);
 
-        const rim = new BABYLON.DirectionalLight('prim', new BABYLON.Vector3(0.55, -0.3, 0.75).normalize(), _previewScene);
-        rim.intensity = 1.0;
-        rim.diffuse = new BABYLON.Color3(0.55, 0.78, 1.0);
-        rim.specular = new BABYLON.Color3(0.55, 0.78, 1.0);
+        const rim = new BABYLON.DirectionalLight('prim', new BABYLON.Vector3(0.5, -0.2, 0.7).normalize(), _previewScene);
+        rim.intensity = 0.7;
+        rim.diffuse = new BABYLON.Color3(0.55, 0.75, 1.0);
+        rim.specular = new BABYLON.Color3(0.55, 0.75, 1.0);
 
+        // Subtle colored accent point lights — keep low so they don't blow out the floor
         _previewAccentLights = [];
-        const orangeL = new BABYLON.PointLight('paccent1', new BABYLON.Vector3(-6, 2.5, 3), _previewScene);
-        orangeL.diffuse = new BABYLON.Color3(1, 0.4, 0.15);
-        orangeL.intensity = 2.8;
-        orangeL.range = 20;
+        const orangeL = new BABYLON.PointLight('paccent1', new BABYLON.Vector3(-4, 3, 2), _previewScene);
+        orangeL.diffuse = new BABYLON.Color3(1, 0.45, 0.2);
+        orangeL.intensity = 0.55;
+        orangeL.range = 10;
+        orangeL.excludedMeshes = [];
         _previewAccentLights.push(orangeL);
 
-        const cyanL = new BABYLON.PointLight('paccent2', new BABYLON.Vector3(6, 2.5, -3), _previewScene);
-        cyanL.diffuse = new BABYLON.Color3(0.2, 0.6, 1.0);
-        cyanL.intensity = 2.4;
-        cyanL.range = 20;
+        const cyanL = new BABYLON.PointLight('paccent2', new BABYLON.Vector3(4, 3, -2), _previewScene);
+        cyanL.diffuse = new BABYLON.Color3(0.25, 0.65, 1.0);
+        cyanL.intensity = 0.5;
+        cyanL.range = 10;
         _previewAccentLights.push(cyanL);
-
-        const magentaL = new BABYLON.PointLight('paccent3', new BABYLON.Vector3(0, 4, -6), _previewScene);
-        magentaL.diffuse = new BABYLON.Color3(0.95, 0.25, 0.7);
-        magentaL.intensity = 1.8;
-        magentaL.range = 18;
-        _previewAccentLights.push(magentaL);
 
         // HDR environment for reflective paint + chrome
         try {
@@ -103,23 +98,23 @@ function initCarPreview() {
         dome.material = domeMat;
         dome.infiniteDistance = true;
 
-        // ── Turntable floor ──
-        const floor = BABYLON.MeshBuilder.CreateDisc('pfloor', { radius: 4.5, tessellation: 72 }, _previewScene);
+        // ── Turntable floor — matte dark with subtle env reflection ──
+        const floor = BABYLON.MeshBuilder.CreateDisc('pfloor', { radius: 3.2, tessellation: 64 }, _previewScene);
         floor.rotation.x = Math.PI / 2;
         floor.position.y = -0.45;
         const floorMat = new BABYLON.StandardMaterial('pfloorMat', _previewScene);
-        floorMat.diffuseColor = new BABYLON.Color3(0.03, 0.03, 0.06);
-        floorMat.specularColor = new BABYLON.Color3(0.6, 0.6, 0.7);
-        floorMat.specularPower = 28;
-        floorMat.emissiveColor = new BABYLON.Color3(0.015, 0.015, 0.03);
+        floorMat.diffuseColor = new BABYLON.Color3(0.04, 0.04, 0.08);
+        floorMat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.03);
+        floorMat.specularPower = 64;
+        floorMat.emissiveColor = new BABYLON.Color3(0.01, 0.01, 0.02);
         if (_previewScene.environmentTexture) {
             floorMat.reflectionTexture = _previewScene.environmentTexture;
-            floorMat.reflectionTexture.level = 0.55;
+            floorMat.reflectionTexture.level = 0.25;
         }
         floor.material = floorMat;
 
-        // Orange glow ring
-        const ring = BABYLON.MeshBuilder.CreateTorus('pring', { diameter: 7.2, thickness: 0.06, tessellation: 64 }, _previewScene);
+        // Orange glow ring — unlit, just emissive
+        const ring = BABYLON.MeshBuilder.CreateTorus('pring', { diameter: 5.4, thickness: 0.045, tessellation: 64 }, _previewScene);
         ring.position.y = -0.42;
         const ringMat = new BABYLON.StandardMaterial('pringMat', _previewScene);
         ringMat.disableLighting = true;
@@ -127,12 +122,17 @@ function initCarPreview() {
         ring.material = ringMat;
 
         // Cyan inner ring
-        const ring2 = BABYLON.MeshBuilder.CreateTorus('pring2', { diameter: 5.4, thickness: 0.025, tessellation: 64 }, _previewScene);
+        const ring2 = BABYLON.MeshBuilder.CreateTorus('pring2', { diameter: 4.2, thickness: 0.02, tessellation: 64 }, _previewScene);
         ring2.position.y = -0.43;
         const ring2Mat = new BABYLON.StandardMaterial('pring2Mat', _previewScene);
         ring2Mat.disableLighting = true;
         ring2Mat.emissiveColor = new BABYLON.Color3(0.25, 0.8, 1);
         ring2.material = ring2Mat;
+
+        // Keep the accent point lights from painting the floor / rings white
+        [floor, ring, ring2].forEach(m => {
+            _previewAccentLights.forEach(L => { L.excludedMeshes = L.excludedMeshes || []; L.excludedMeshes.push(m); });
+        });
 
         try {
             const glow = new BABYLON.GlowLayer('pglow', _previewScene);
@@ -219,6 +219,7 @@ function updateCarPreview() {
             meshes.forEach(m => { try { m.dispose(); } catch(e) {} });
             return;
         }
+        console.log('[preview] GLB loaded:', fileName, 'meshes:', meshes.length);
 
         let innerParent = rootNode;
         if (modelInfo.fixRotation) {
@@ -273,10 +274,17 @@ function updateCarPreview() {
             } catch (e) { /* keep original */ }
         });
 
+        // Force world-matrix refresh before bounds so getBoundingInfo is up-to-date
+        rootNode.computeWorldMatrix(true);
+        rootNode.getChildren(undefined, false).forEach(c => {
+            if (c.computeWorldMatrix) c.computeWorldMatrix(true);
+        });
+
         const bounds = _previewComputeBounds(rootNode);
-        if (bounds) {
+        const haveBounds = bounds && bounds.size.x > 0.01 && bounds.size.y > 0.01 && bounds.size.z > 0.01;
+        if (haveBounds) {
             const size = Math.max(bounds.size.x, bounds.size.y, bounds.size.z);
-            const scaleFactor = size > 0 ? 3.2 / size : 1;
+            const scaleFactor = 3.0 / size;
             rootNode.scaling.x = scaleFactor;
             rootNode.scaling.y = scaleFactor;
             rootNode.scaling.z = scaleFactor;
@@ -285,6 +293,15 @@ function updateCarPreview() {
             const centerZ = (bounds.min.z + bounds.max.z) / 2;
             rootNode.position.x = -centerX * scaleFactor;
             rootNode.position.z = -centerZ * scaleFactor;
+            console.log('[preview] bounds size:', size.toFixed(2), 'scale:', scaleFactor.toFixed(2));
+        } else {
+            // Graceful fallback — use the same scale the in-game code uses
+            const fallback = modelInfo.scale ? modelInfo.scale * 0.6 : 1;
+            rootNode.scaling.x = fallback;
+            rootNode.scaling.y = fallback;
+            rootNode.scaling.z = fallback;
+            rootNode.position.set(0, -0.3, 0);
+            console.warn('[preview] using fallback scale', fallback, 'bounds were', bounds);
         }
 
         _previewLoadedStyle = style;
