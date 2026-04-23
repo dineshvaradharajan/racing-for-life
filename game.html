@@ -30,7 +30,9 @@
         .card-icon{font-size:32px;margin-bottom:6px}
         .card-car{width:100%;aspect-ratio:180/75;margin:0 0 6px;display:block;filter:drop-shadow(0 3px 6px rgba(0,0,0,.45))}
         .car-preview{width:100%;max-width:380px;aspect-ratio:180/75;margin:8px auto 14px;display:block;filter:drop-shadow(0 6px 14px rgba(0,0,0,.55)) drop-shadow(0 0 22px rgba(255,107,53,.22))}
-        #car-preview-canvas{width:100%;max-width:460px;height:220px;margin:8px auto 10px;display:block;background:radial-gradient(ellipse at center,rgba(255,107,53,.12) 0%,rgba(0,0,0,.35) 60%,transparent 100%);border-radius:14px;touch-action:none;outline:none}
+        #car-preview-canvas{width:100%;max-width:520px;height:260px;margin:8px auto 10px;display:block;background:radial-gradient(ellipse at center,#1a0e40 0%,#0a0520 45%,#050208 100%);border:1px solid rgba(255,107,53,.25);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.55),0 0 40px rgba(255,107,53,.15),inset 0 1px 0 rgba(255,255,255,.04);touch-action:none;outline:none}
+        @media(max-width:600px){#car-preview-canvas{height:200px;max-width:96%}}
+        @media(min-width:601px) and (max-width:1024px){#car-preview-canvas{height:230px}}
         .car-preview-label{color:#aaa;font-size:12px;letter-spacing:2px;text-align:center;margin-top:-4px;margin-bottom:6px;text-transform:uppercase}
         .car-preview-name{color:#ff6b35;font-size:18px;font-weight:800;text-align:center;letter-spacing:1px;margin-bottom:2px}
         .card-title{font-size:14px;font-weight:700;margin-bottom:4px}
