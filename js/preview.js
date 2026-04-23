@@ -254,41 +254,12 @@ function _loadPreviewCar(style, color) {
             }
         });
 
-        // Apply the in-game scale as a starting point, then auto-fit to the turntable
-        const s = modelInfo.scale || 1;
-        rootNode.scaling.set(s, s, s);
-        rootNode.position.y = 0;
+        // Start at scale 1 — actual scaling happens in _previewFitToTurntable
+        rootNode.scaling.set(1, 1, 1);
+        rootNode.position.set(0, 0, 0);
 
-        // Two-pass auto-fit: refresh world matrices, compute bounds, then
-        // rescale so the car is ~4 units long and translate so it sits on the floor
-        requestAnimationFrame(() => {
-            if (_previewCarRoot !== rootNode) return;
-            rootNode.computeWorldMatrix(true);
-            rootNode.getChildMeshes(false).forEach(m => {
-                if (m.refreshBoundingInfo) m.refreshBoundingInfo();
-                if (m.computeWorldMatrix) m.computeWorldMatrix(true);
-            });
-            const b = _previewComputeBounds(rootNode);
-            if (!b) return;
-            const maxDim = Math.max(b.size.x, b.size.y, b.size.z);
-            const targetLen = 4.2;
-            if (maxDim > 0.01) {
-                const factor = targetLen / maxDim;
-                rootNode.scaling.set(s * factor, s * factor, s * factor);
-                rootNode.computeWorldMatrix(true);
-                rootNode.getChildMeshes(false).forEach(m => {
-                    if (m.refreshBoundingInfo) m.refreshBoundingInfo();
-                    if (m.computeWorldMatrix) m.computeWorldMatrix(true);
-                });
-                const b2 = _previewComputeBounds(rootNode);
-                if (b2) {
-                    rootNode.position.y = -0.5 - b2.min.y;
-                    rootNode.position.x = -((b2.min.x + b2.max.x) / 2);
-                    rootNode.position.z = -((b2.min.z + b2.max.z) / 2);
-                }
-            }
-            console.log('[preview] fit', fileName, 'maxDim=', maxDim.toFixed(2));
-        });
+        // Defer fit so clones have had a chance to settle into the hierarchy
+        setTimeout(() => _previewFitToTurntable(rootNode, fileName), 60);
     }, null, (_scene, message, exception) => {
         console.warn('[preview] GLB load failed for ' + style + ':', message, exception);
     });
@@ -336,6 +307,66 @@ function updateCarPreview() {
     _previewRotation = 0;
     _previewLoadedStyle = style;
     _previewLoadedColor = color;
+}
+
+// Robust fit: walks every AbstractMesh under root, collects valid world
+// bounding boxes, scales root so the longest axis ≈ 4.0, then repositions
+// so the car is centered on X/Z with its bottom on the turntable (y=-0.5).
+function _previewFitToTurntable(root, label) {
+    if (!root || !_previewScene) return;
+    if (_previewCarRoot !== root) return;
+
+    const collectMeshes = (node) => {
+        const out = [];
+        const visit = (n) => {
+            if (n && n.getClassName && n.getClassName() !== 'TransformNode'
+                && n.getBoundingInfo && n.isEnabled && n.isEnabled()) {
+                out.push(n);
+            }
+            if (n && n.getChildren) n.getChildren().forEach(visit);
+        };
+        visit(node);
+        return out;
+    };
+
+    const worldBounds = (meshes) => {
+        let min = null, max = null;
+        for (const m of meshes) {
+            if (m.computeWorldMatrix) m.computeWorldMatrix(true);
+            const bb = m.getBoundingInfo().boundingBox;
+            const lo = bb.minimumWorld, hi = bb.maximumWorld;
+            if (!isFinite(lo.x) || !isFinite(hi.x)) continue;
+            const dx = hi.x - lo.x, dy = hi.y - lo.y, dz = hi.z - lo.z;
+            if (dx < 0.0001 && dy < 0.0001 && dz < 0.0001) continue;
+            if (!min) { min = lo.clone(); max = hi.clone(); }
+            else { min.minimizeInPlace(lo); max.maximizeInPlace(hi); }
+        }
+        return min ? { min, max } : null;
+    };
+
+    root.computeWorldMatrix(true);
+    const meshes = collectMeshes(root);
+    if (!meshes.length) { console.warn('[preview] no meshes under', label); return; }
+
+    const b1 = worldBounds(meshes);
+    if (!b1) { console.warn('[preview] no valid bounds for', label); return; }
+    const s1 = Math.max(b1.max.x - b1.min.x, b1.max.y - b1.min.y, b1.max.z - b1.min.z);
+    if (s1 < 0.0001) { console.warn('[preview] degenerate size for', label); return; }
+
+    const target = 4.0;
+    const factor = target / s1;
+    root.scaling.scaleInPlace(factor);
+    root.computeWorldMatrix(true);
+
+    const b2 = worldBounds(meshes);
+    if (!b2) return;
+    root.position.x -= (b2.min.x + b2.max.x) / 2;
+    root.position.y -= b2.min.y + 0.5;
+    root.position.z -= (b2.min.z + b2.max.z) / 2;
+    root.computeWorldMatrix(true);
+
+    console.log('[preview] fit', label,
+        'native=', s1.toFixed(2), 'factor=', factor.toFixed(3));
 }
 
 function _retintPreviewCar(color) {
