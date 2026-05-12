@@ -92,7 +92,7 @@ function updatePlayer(dt) {
     // ── Nitro System — tap-to-fire ──
     // One Shift tap fires the nitro: it drains the tank automatically and
     // boosts top speed. No need to hold the key, no second-tap mechanic.
-    const NITRO_MIN_TO_START = 10;
+    const NITRO_MIN_TO_START = 25;
     const shiftHeld = !!keys['shift'];
     const shiftPressed = shiftHeld && !_prevShiftHeld;
     _prevShiftHeld = shiftHeld;

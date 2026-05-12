@@ -10,6 +10,7 @@ let _previewLoadedColor = null;
 let _previewBodyMaterials = [];
 let _previewRotation = 0;
 let _previewAccentLights = [];
+let _previewResizeWired = false;
 
 function initCarPreview() {
     const canvas = document.getElementById('car-preview-canvas');
@@ -172,7 +173,10 @@ function initCarPreview() {
             _previewScene.render();
         });
 
-        window.addEventListener('resize', () => { if (_previewEngine) _previewEngine.resize(); });
+        if (!_previewResizeWired) {
+            window.addEventListener('resize', () => { if (_previewEngine) _previewEngine.resize(); });
+            _previewResizeWired = true;
+        }
     }
 
     requestAnimationFrame(() => {
@@ -672,6 +676,7 @@ let _trackPrevCamera = null;
 let _trackPrevTrackId = null;
 let _trackPrevAutoSpin = true;
 let _trackPrevIdleSince = 0;
+let _trackPrevResizeWired = false;
 
 function initTrackPreview() {
     const canvas = document.getElementById('track-preview-canvas');
@@ -721,7 +726,10 @@ function initTrackPreview() {
             _trackPrevScene.render();
         });
 
-        window.addEventListener('resize', () => { if (_trackPrevEngine) _trackPrevEngine.resize(); });
+        if (!_trackPrevResizeWired) {
+            window.addEventListener('resize', () => { if (_trackPrevEngine) _trackPrevEngine.resize(); });
+            _trackPrevResizeWired = true;
+        }
     }
 
     requestAnimationFrame(() => {
