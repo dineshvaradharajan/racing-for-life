@@ -46,14 +46,6 @@ function updateHUD() {
     if (bigFill) {
         bigFill.style.width = nitro + '%';
         if (bigPct) bigPct.textContent = Math.round(nitro) + '%';
-        // Cyan-shift the fill while a Perfect Nitro is active
-        if (typeof perfectNitroActive !== 'undefined' && perfectNitroActive) {
-            bigFill.style.background = 'linear-gradient(180deg,#a8eaff 0%,#33ccff 50%,#0099cc 100%)';
-            bigFill.style.boxShadow = '0 0 22px rgba(80,220,255,1),0 0 48px rgba(80,220,255,.6),inset 0 2px 0 rgba(255,255,255,.5)';
-        } else {
-            bigFill.style.background = 'linear-gradient(180deg,#ffe04d 0%,#ffb627 45%,#ff8c00 100%)';
-            bigFill.style.boxShadow = '0 0 18px rgba(255,176,40,.85),0 0 36px rgba(255,120,40,.55),inset 0 2px 0 rgba(255,255,255,.5),inset 0 -3px 0 rgba(180,80,0,.45)';
-        }
     }
 
     // Drift indicator — show during any drift
@@ -74,7 +66,7 @@ function updateHUD() {
     const car = CARS[GameState.selectedCar];
     const maxSpd = (car.speed / 100) * 85;
     const speedRatio = Math.abs(playerSpeed) / maxSpd;
-    if (keys && keys['shift'] && nitro > 0) {
+    if (nitroActive && nitro > 0) {
         speedEl.style.color = '#00ddff';
         speedEl.style.textShadow = '0 0 25px rgba(0,221,255,.6),0 0 50px rgba(0,221,255,.3)';
     } else if (speedRatio > 0.85) {

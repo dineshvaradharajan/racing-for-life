@@ -231,11 +231,11 @@ function updateSmoke(dt) {
 
 // ── Nitro flame effect — called from animate() ──
 function updateNitroFlame() {
-    const nitroActive = keys && keys['shift'] && nitro > 0 && Math.abs(playerSpeed) > 2;
+    const flameOn = nitroActive && nitro > 0 && Math.abs(playerSpeed) > 2;
 
     if (!nitroFlameSystem || !nitroEmitter) return;
 
-    if (nitroActive) {
+    if (flameOn) {
         const behind = new BABYLON.Vector3(-Math.sin(carHeading), 0, -Math.cos(carHeading));
         nitroEmitter.position.set(
             carX + behind.x * 3.5,
@@ -266,8 +266,7 @@ function updateNitroFlame() {
 // ── Speed lines overlay intensity based on speed ──
 function updateSpeedLines() {
     if (!speedLinesOverlay) return;
-    const nitroActive = keys && keys['shift'] && nitro > 0;
-    if (nitroActive) return; // nitro handles its own overlay
+    if (nitroActive && nitro > 0) return; // nitro handles its own overlay
 
     const absSpeed = Math.abs(playerSpeed);
     const car = CARS[GameState.selectedCar];

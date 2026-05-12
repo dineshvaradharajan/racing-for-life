@@ -10,7 +10,7 @@ let lastDriftScore = 0;
 let nearMissTimer = 0;
 let nearMissCount = 0;
 let knockdownCount = 0;
-let perfectNitroActive = false;
+let nitroActive = false;
 let _prevShiftHeld = false;
 let slipstreamTimer = 0;
 let airborneTimer = 0;
@@ -89,34 +89,26 @@ function updatePlayer(dt) {
         driftTimer = 0;
     }
 
-    // ── Nitro System — Asphalt-style "Perfect Zone" ──
-    // The HUD bar shows a cyan band at 38-51%. If the user freshly presses
-    // Shift while the bar's fill is *inside* that band, they get a stronger
-    // boost (Perfect Nitro). Otherwise it's a normal boost.
-    const PERFECT_ZONE_LO = 38;
-    const PERFECT_ZONE_HI = 51;
+    // ── Nitro System — tap-to-fire ──
+    // One Shift tap fires the nitro: it drains the tank automatically and
+    // boosts top speed. No need to hold the key, no second-tap mechanic.
+    const NITRO_MIN_TO_START = 10;
     const shiftHeld = !!keys['shift'];
-    if (shiftHeld && !_prevShiftHeld) {
-        // Fresh press — decide if this activation is a Perfect Nitro
-        if (nitro >= PERFECT_ZONE_LO && nitro <= PERFECT_ZONE_HI) {
-            perfectNitroActive = true;
-            _showActionText('PERFECT NITRO!', '#00ddff');
-        } else {
-            perfectNitroActive = false;
-        }
-    }
+    const shiftPressed = shiftHeld && !_prevShiftHeld;
     _prevShiftHeld = shiftHeld;
 
-    const nitroActive = shiftHeld && nitro > 0;
+    if (shiftPressed && !nitroActive && nitro >= NITRO_MIN_TO_START) {
+        nitroActive = true;
+    }
+
     if (nitroActive) {
-        const nitroMultiplier = perfectNitroActive ? 1.75 : 1.4;
-        playerSpeed = Math.min(playerSpeed + accelForce * 3.5 * dt, maxSpd * nitroMultiplier);
-        nitro = Math.max(0, nitro - 25 * dt);
-    } else if (shiftHeld) {
-        // Shift held but tank empty — no boost, no regen until released
-        perfectNitroActive = false;
+        if (nitro > 0) {
+            playerSpeed = Math.min(playerSpeed + accelForce * 3.5 * dt, maxSpd * 1.4);
+            nitro = Math.max(0, nitro - 25 * dt);
+        } else {
+            nitroActive = false;
+        }
     } else {
-        perfectNitroActive = false;
         nitro = Math.min(100, nitro + 3 * dt);
     }
 

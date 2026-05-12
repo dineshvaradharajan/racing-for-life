@@ -27,7 +27,7 @@ function startRace() {
     if (typeof driftScore !== 'undefined') { driftScore = 0; driftCombo = 0; driftTimer = 0; }
     if (typeof nearMissCount !== 'undefined') { nearMissCount = 0; nearMissTimer = 0; }
     if (typeof knockdownCount !== 'undefined') knockdownCount = 0;
-    if (typeof perfectNitroActive !== 'undefined') perfectNitroActive = false;
+    if (typeof nitroActive !== 'undefined') nitroActive = false;
 
     // Countdown
     const cd = document.getElementById('countdown');
@@ -108,7 +108,6 @@ function animate() {
 
     // Dynamic FOV — more aggressive like Asphalt Legends
     const speedRatio = Math.abs(playerSpeed) / maxSpd;
-    const nitroActive = keys && keys['shift'] && nitro > 0;
     const fovBoost = nitroActive ? 12 : 0;
     const targetFov = (65 + speedRatio * 8 + fovBoost) * Math.PI / 180;
     camera.fov += (targetFov - camera.fov) * Math.min(1, 5 * dt);
