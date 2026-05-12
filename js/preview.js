@@ -273,7 +273,9 @@ async function preloadAllCarThumbnails() {
 
     for (const car of CARS) {
         const style = car.style;
-        if (window.__carThumbnails[style]) continue;
+        // Always overwrite. The live-preview capture path can race and store
+        // an empty-stage screenshot (rings, no car). The offscreen render is
+        // deterministic — let it be the canonical thumb for every car.
         const info = CAR_MODELS[style];
         if (!info) continue;
         try {
@@ -628,10 +630,26 @@ function _previewFitToTurntable(root, label) {
     // settled. Cache by style so we only do it once per car.
     window.__carThumbnails = window.__carThumbnails || {};
     const captureStyle = _previewLoadedStyle;
+    const captureRoot = root;
     if (captureStyle && !window.__carThumbnails[captureStyle]) {
         setTimeout(() => {
             try {
                 if (!_previewEngine || !_previewCamera) return;
+                // Refuse to capture if the car we fit is no longer current,
+                // or if its meshes have degenerate bounds (would yield an
+                // empty-stage screenshot). The offscreen preload will fill
+                // this car in cleanly.
+                if (_previewCarRoot !== captureRoot) return;
+                if (_previewLoadedStyle !== captureStyle) return;
+                const sceneBounds = worldBounds(collectMeshes(captureRoot));
+                if (!sceneBounds) return;
+                const ext = Math.max(
+                    sceneBounds.max.x - sceneBounds.min.x,
+                    sceneBounds.max.y - sceneBounds.min.y,
+                    sceneBounds.max.z - sceneBounds.min.z
+                );
+                if (ext < 0.5) return;
+                _previewScene.render();
                 BABYLON.Tools.CreateScreenshot(_previewEngine, _previewCamera,
                     { width: 280, height: 160 }, (data) => {
                         window.__carThumbnails[captureStyle] = data;
@@ -640,7 +658,7 @@ function _previewFitToTurntable(root, label) {
                         }
                     });
             } catch(e) { /* graceful */ }
-        }, 350);
+        }, 500);
     }
 }
 

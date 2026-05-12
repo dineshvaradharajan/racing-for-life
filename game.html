@@ -13,6 +13,26 @@
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
     <script src="https://unpkg.com/earcut@2.2.4/dist/earcut.min.js"></script>
+    <script>
+        // Pre-warm the Draco WASM decoder. The GLB car models are
+        // Draco-compressed; Babylon lazy-fetches the decoder from cdn.babylonjs.com
+        // on first decode. On slow phones that fetch can stall, leaving every car
+        // as an empty TransformNode. Kick the fetch off here so it overlaps with
+        // login and menu rendering, not the first car spawn.
+        try {
+            if (window.BABYLON && BABYLON.DracoCompression) {
+                BABYLON.DracoCompression.Configuration = {
+                    decoder: {
+                        wasmUrl: 'https://cdn.babylonjs.com/draco_wasm_wrapper_gltf.js',
+                        wasmBinaryUrl: 'https://cdn.babylonjs.com/draco_decoder_gltf.wasm',
+                        fallbackUrl: 'https://cdn.babylonjs.com/draco_decoder_gltf.js',
+                    }
+                };
+                // Touching .Default triggers the lazy init + WASM fetch.
+                void BABYLON.DracoCompression.Default;
+            }
+        } catch(e) { console.warn('Draco prewarm failed', e); }
+    </script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;overflow:hidden;background:#0a0a1a;color:#fff}
@@ -75,6 +95,51 @@
         .stat-label{display:flex;justify-content:space-between;color:#aaa}
         .section-title{font-size:24px;font-weight:800;margin-bottom:4px;background:linear-gradient(45deg,#ff6b35,#f7c948);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
         .section-subtitle{color:#666;margin-bottom:20px}
+
+        /* ── Car-select dramatic redesign ── */
+        #car-select #car-preview-name{display:none}
+        #car-select .car-stage-canvas-wrap::after{inset:0}
+        #car-select .cs-header{position:relative;display:flex;align-items:center;justify-content:center;gap:18px;padding:6px 0 4px}
+        #car-select .cs-header::before,#car-select .cs-header::after{content:"";flex:1;max-width:260px;height:14px;background:repeating-linear-gradient(115deg,#ff6b35 0 8px,transparent 8px 16px);clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%);opacity:.55;animation:csStripeSlide 1.8s linear infinite}
+        #car-select .cs-header::before{transform:scaleX(-1)}
+        #car-select .cs-title{font-size:42px;font-weight:900;letter-spacing:8px;text-transform:uppercase;background:linear-gradient(90deg,#fff 0%,#f7c948 35%,#ff6b35 70%,#fff 100%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 0 40px rgba(255,107,53,.45);animation:csShine 3.4s linear infinite;white-space:nowrap}
+        #car-select .cs-sub{text-align:center;color:#9aa;font-size:11px;letter-spacing:6px;text-transform:uppercase;margin:0 0 8px;opacity:.7}
+        #car-select .cs-sub::before,#car-select .cs-sub::after{content:"◢ ◣";color:#ff6b35;margin:0 10px;opacity:.6;letter-spacing:0}
+        @keyframes csShine{to{background-position:200% 0}}
+        @keyframes csStripeSlide{to{background-position:32px 0}}
+
+        /* Preview-canvas overlay: huge ghost name, class badge, side speedlines */
+        #car-select .car-stage-canvas-wrap::before{content:"";position:absolute;left:0;right:0;top:38px;bottom:0;border-radius:16px;pointer-events:none;background:repeating-linear-gradient(110deg,transparent 0 38px,rgba(255,107,53,.05) 38px 39px,transparent 39px 74px);mix-blend-mode:screen;animation:csSpeedLines 6s linear infinite;z-index:1}
+        @keyframes csSpeedLines{to{background-position:300px 0}}
+        #car-select .cs-hero-overlay{position:absolute;left:18px;right:18px;top:50px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none;z-index:3}
+        #car-select .cs-ghost-name{font-size:clamp(38px,5.4vw,84px);font-weight:900;letter-spacing:-2px;line-height:.85;color:transparent;-webkit-text-stroke:1.5px rgba(255,107,53,.55);text-transform:uppercase;text-shadow:0 0 28px rgba(255,107,53,.18);max-width:65%;word-break:break-word;opacity:.95}
+        #car-select .cs-ghost-tag{display:block;font-size:12px;letter-spacing:5px;color:#f7c948;-webkit-text-stroke:0;margin-top:6px;opacity:.85;text-shadow:0 0 8px rgba(247,201,72,.5)}
+        #car-select .cs-class-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 14px 8px 12px;font-weight:900;font-size:14px;letter-spacing:3px;color:#0a0a1a;background:linear-gradient(135deg,#ffe04d 0%,#ffb627 50%,#ff6b35 100%);clip-path:polygon(0 0,100% 0,calc(100% - 12px) 100%,0 100%);box-shadow:0 0 24px rgba(255,176,40,.65),0 0 48px rgba(255,107,53,.35);text-shadow:0 1px 0 rgba(255,255,255,.35)}
+        #car-select .cs-class-badge .dot{width:8px;height:8px;border-radius:50%;background:#0a0a1a;box-shadow:0 0 6px rgba(0,0,0,.6) inset}
+        #car-select .cs-class-badge[data-class="A"]{background:linear-gradient(135deg,#a8eaff,#33ccff 55%,#0099cc)}
+        #car-select .cs-class-badge[data-class="B"]{background:linear-gradient(135deg,#c7c7c7,#888 55%,#555);color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.5)}
+
+        /* Animated shimmer on the stat fill bars */
+        #car-select .stat-fill{position:relative;overflow:hidden}
+        #car-select .stat-fill::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.55) 50%,transparent 100%);transform:translateX(-100%);animation:csBarShine 2.4s ease-in-out infinite}
+        @keyframes csBarShine{0%{transform:translateX(-100%)}55%,100%{transform:translateX(220%)}}
+
+        /* RACE button — pulsing chevron CTA */
+        #car-select .race-cta{position:relative;padding:18px 26px 18px 32px;font-size:18px;font-weight:900;letter-spacing:5px;text-transform:uppercase;color:#0a0a1a;background:linear-gradient(135deg,#ffe04d 0%,#ffb627 35%,#ff6b35 70%,#ff3d6b 100%);background-size:200% 100%;border:0;border-radius:12px;cursor:pointer;clip-path:polygon(0 0,100% 0,calc(100% - 16px) 100%,0 100%);box-shadow:0 0 28px rgba(255,107,53,.55),0 0 56px rgba(255,107,53,.25),inset 0 2px 0 rgba(255,255,255,.45);animation:csRacePulse 1.6s ease-in-out infinite,csRaceShimmer 3.2s linear infinite;transition:transform .12s}
+        #car-select .race-cta:hover{transform:translateY(-2px) scale(1.03)}
+        #car-select .race-cta::after{content:"";display:inline-block;width:0;height:0;border-left:10px solid #0a0a1a;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:10px;vertical-align:middle}
+        #car-select .back-cta{padding:14px 22px;font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#cbd0e0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;cursor:pointer}
+        #car-select .back-cta:hover{background:rgba(255,255,255,.08);color:#fff}
+        @keyframes csRacePulse{0%,100%{box-shadow:0 0 28px rgba(255,107,53,.55),0 0 56px rgba(255,107,53,.25),inset 0 2px 0 rgba(255,255,255,.45)}50%{box-shadow:0 0 44px rgba(255,107,53,.9),0 0 88px rgba(255,107,53,.45),inset 0 2px 0 rgba(255,255,255,.55)}}
+        @keyframes csRaceShimmer{to{background-position:200% 0}}
+
+        @media(max-width:760px){
+            #car-select .cs-title{font-size:26px;letter-spacing:4px}
+            #car-select .cs-header::before,#car-select .cs-header::after{max-width:80px;height:10px}
+            #car-select .cs-ghost-name{font-size:34px}
+            #car-select .cs-hero-overlay{top:46px;left:12px;right:12px}
+            #car-select .race-cta{padding:14px 18px;font-size:14px;letter-spacing:3px}
+        }
         .color-picker{display:flex;gap:8px;margin:10px 0}
         .color-swatch{width:30px;height:30px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all .3s}
         .color-swatch:hover,.color-swatch.selected{border-color:#fff;transform:scale(1.2)}
@@ -466,12 +531,16 @@
     <button class="menu-btn secondary" onclick="showScreen('main-menu')">Back</button>
 </div>
 <div id="car-select" class="screen" style="padding:12px 16px;justify-content:flex-start">
-    <div class="section-title" style="margin-bottom:0">Choose Your Car</div>
-    <div class="section-subtitle" style="margin-bottom:10px">Tap a car, then race</div>
+    <div class="cs-header"><span class="cs-title">Choose Your Ride</span></div>
+    <div class="cs-sub">tap a card · pick your weapon</div>
     <div id="car-strip" class="car-strip"></div>
     <div id="car-stage" class="car-stage">
         <div class="car-stage-canvas-wrap">
             <div class="car-preview-name" id="car-preview-name"></div>
+            <div class="cs-hero-overlay">
+                <div><span class="cs-ghost-name" id="cs-ghost-name"></span><span class="cs-ghost-tag" id="cs-ghost-tag"></span></div>
+                <div class="cs-class-badge" id="cs-class-badge" data-class="S"><span class="dot"></span><span id="cs-class-label">S CLASS</span></div>
+            </div>
             <canvas id="car-preview-canvas"></canvas>
         </div>
         <div class="car-stage-info">
@@ -484,7 +553,7 @@
                 <div class="stat-row"><span class="stat-key">Handling</span><span class="stat-val" id="ps-handling">0</span><span class="stat-unit">/100</span></div>
                 <div class="stat-bar"><div class="stat-fill" id="ps-handling-bar"></div></div>
             </div>
-            <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap"><button class="menu-btn primary" onclick="showScreen('track-select')">Next</button><button class="menu-btn secondary" onclick="showScreen('main-menu')">Back</button></div>
+            <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="race-cta" onclick="showScreen('track-select')">Race</button><button class="back-cta" onclick="showScreen('main-menu')">Back</button></div>
         </div>
     </div>
 </div>
@@ -609,19 +678,19 @@
 })();
 </script>
 <script>window.__V__='20260503f';</script>
-<script src="js/config.js?v=20260508ah"></script>
-<script src="js/login.js?v=20260508ah"></script>
-<script src="js/sound.js?v=20260508ah"></script>
-<script src="js/scene.js?v=20260508ah"></script>
-<script src="js/cars.js?v=20260508ah"></script>
-<script src="js/track.js?v=20260508ah"></script>
-<script src="js/effects.js?v=20260508ah"></script>
-<script src="js/hud.js?v=20260508ah"></script>
-<script src="js/physics.js?v=20260508ah"></script>
-<script src="js/race.js?v=20260508ah"></script>
-<script src="js/input.js?v=20260508ah"></script>
-<script src="js/touch.js?v=20260508ah"></script>
-<script src="js/preview.js?v=20260508ah"></script>
+<script src="js/config.js?v=20260512c"></script>
+<script src="js/login.js?v=20260512c"></script>
+<script src="js/sound.js?v=20260512c"></script>
+<script src="js/scene.js?v=20260512c"></script>
+<script src="js/cars.js?v=20260512c"></script>
+<script src="js/track.js?v=20260512c"></script>
+<script src="js/effects.js?v=20260512c"></script>
+<script src="js/hud.js?v=20260512c"></script>
+<script src="js/physics.js?v=20260512c"></script>
+<script src="js/race.js?v=20260512c"></script>
+<script src="js/input.js?v=20260512c"></script>
+<script src="js/touch.js?v=20260512c"></script>
+<script src="js/preview.js?v=20260512c"></script>
 <!-- Hidden YouTube iframe — single background track that plays continuously
      across menus and races. -->
 <div id="menu-music-frame" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;pointer-events:none"></div>

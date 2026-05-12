@@ -32,11 +32,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        # Don't cache HTML/JS/GLB so dev edits and re-compressed assets show
-        # up immediately. (GLBs were getting cached at their old multi-MB
-        # sizes after Draco compression.)
-        if self.path.endswith(('.html', '.js', '.glb')) or '?v=' in self.path:
+        # Don't cache HTML/JS so dev edits show up immediately. GLBs and
+        # other heavy static assets get long-lived caching — they're
+        # content-addressable (filename changes when the model changes),
+        # and forcing re-download on every click made the car-select
+        # screen feel slow on LAN.
+        if self.path.endswith(('.html', '.js')) or '?v=' in self.path:
             self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        elif self.path.endswith(('.glb', '.png', '.jpg', '.jpeg', '.webp', '.mp3', '.ogg', '.wav')):
+            self.send_header('Cache-Control', 'public, max-age=86400')
         super().end_headers()
 
     def do_OPTIONS(self):

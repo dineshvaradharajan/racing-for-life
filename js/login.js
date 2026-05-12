@@ -386,6 +386,27 @@ function buildCarSelect() {
         psSpeedBar.style.width = selected.speed + '%';
         psAccelBar.style.width = selected.accel + '%';
         psHandlingBar.style.width = selected.handling + '%';
+
+        // ── Hero overlay: ghost name, tagline, class badge ──
+        const ghostName = document.getElementById('cs-ghost-name');
+        const ghostTag  = document.getElementById('cs-ghost-tag');
+        const badge     = document.getElementById('cs-class-badge');
+        const badgeLbl  = document.getElementById('cs-class-label');
+        if (ghostName) ghostName.textContent = (selected.name || '').toUpperCase();
+        if (ghostTag) {
+            const score = (selected.speed + selected.accel + selected.handling) / 3;
+            const tagline = score >= 85 ? 'Hypercar · Apex Hunter'
+                          : score >= 70 ? 'Supercar · Track Tuned'
+                          : score >= 55 ? 'Sport · Street Spec'
+                          : 'Starter · Learn The Line';
+            ghostTag.textContent = tagline;
+        }
+        if (badge && badgeLbl) {
+            const top = Math.max(selected.speed, selected.accel, selected.handling);
+            const cls = top >= 88 ? 'S' : top >= 75 ? 'A' : 'B';
+            badge.dataset.class = cls;
+            badgeLbl.textContent = cls + ' CLASS';
+        }
     }
     if (typeof updateCarPreview === 'function') updateCarPreview();
 

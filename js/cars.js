@@ -1494,9 +1494,23 @@ function buildCarMesh(color, carDef) {
 
     // Try to load GLB model
     if (CAR_MODELS[style]) {
+        let settled = false;
+        // Watchdog: on slow phones the Draco WASM decoder fetch (lazy-loaded
+        // by Babylon's glTF loader) can stall without ever firing the error
+        // callback. Without a timeout the car stays an empty TransformNode
+        // and nothing ever shows up on track. Force the procedural fallback
+        // if the GLB hasn't resolved in time.
+        const watchdog = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            console.warn('[cars] GLB watchdog tripped for', style, '— using procedural fallback');
+            buildProceduralCar(group, color, carDef);
+        }, 8000);
         loadCarModel(style, color, group, function(result) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(watchdog);
             if (!result) {
-                // Fallback to procedural if model fails
                 buildProceduralCar(group, color, carDef);
             }
         });
