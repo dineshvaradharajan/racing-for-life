@@ -59,7 +59,12 @@ function initScene() {
         adaptToDeviceRatio: true,
         powerPreference: 'high-performance',
     });
-    engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio, 2));
+    // Render at canvas native pixel size — no DPR super-sampling. Retina
+    // devices were rendering at 2x (4x the pixel work) for marginal crispness
+    // gains, which tanked frame-rate on phones. Cap at 1.5 for very low-end
+    // small screens to recover even more headroom.
+    const isMobile = Math.min(window.innerWidth, window.innerHeight) < 720;
+    engine.setHardwareScalingLevel(isMobile ? 1.5 : 1);
 
     // Create scene
     scene = new BABYLON.Scene(engine);
@@ -95,16 +100,22 @@ function initScene() {
     sun.intensity = isNight ? 0.7 : 1.5;
     sun.position = new BABYLON.Vector3(100, 200, 80);
 
-    // High-res shadow cascade
-    shadowGenerator = new BABYLON.ShadowGenerator(4096, sun);
-    shadowGenerator.useBlurExponentialShadowMap = true;
-    shadowGenerator.blurKernel = 12;
-    shadowGenerator.blurScale = 2;
-    shadowGenerator.depthScale = 50;
-    shadowGenerator.setDarkness(0.4);
-    shadowGenerator.bias = 0.0005;
-    shadowGenerator.normalBias = 0.015;
-    shadowGenerator.transparencyShadow = true;
+    // Shadow cascade — skipped entirely on mobile (an extra full-scene pass
+    // per frame plus the blur cost). On desktop, 1024² with an 8-tap blur is
+    // still plenty sharp at our camera distance.
+    if (isMobile) {
+        shadowGenerator = null;
+    } else {
+        shadowGenerator = new BABYLON.ShadowGenerator(1024, sun);
+        shadowGenerator.useBlurExponentialShadowMap = true;
+        shadowGenerator.blurKernel = 8;
+        shadowGenerator.blurScale = 2;
+        shadowGenerator.depthScale = 50;
+        shadowGenerator.setDarkness(0.4);
+        shadowGenerator.bias = 0.0005;
+        shadowGenerator.normalBias = 0.015;
+        shadowGenerator.transparencyShadow = true;
+    }
 
     // Fill light — warm bounce
     const fill = new BABYLON.DirectionalLight("fill", new BABYLON.Vector3(0.6, -0.2, -0.5).normalize(), scene);
@@ -215,37 +226,57 @@ function initScene() {
 
     const imgProc = new BABYLON.ImageProcessingPostProcess("imgProc", 1.0, camera);
 
-    // Chromatic aberration — subtle edge color fringing like real lenses
-    try {
-        chromaticAberration = new BABYLON.ChromaticAberrationPostProcess(
-            "chromatic", engine.getRenderWidth(), camera
-        );
-        chromaticAberration.aberrationAmount = baseAberration;
-        chromaticAberration.radialIntensity = 0.85;
-    } catch(e) { chromaticAberration = null; }
+    // Chromatic aberration — subtle edge fringing. Skipped on mobile.
+    if (!isMobile) {
+        try {
+            chromaticAberration = new BABYLON.ChromaticAberrationPostProcess(
+                "chromatic", engine.getRenderWidth(), camera
+            );
+            chromaticAberration.aberrationAmount = baseAberration;
+            chromaticAberration.radialIntensity = 0.85;
+        } catch(e) { chromaticAberration = null; }
+    } else {
+        chromaticAberration = null;
+    }
 
-    // Motion blur — Asphalt-style speed blur that ramps with velocity
-    try {
-        motionBlur = new BABYLON.MotionBlurPostProcess(
-            "motionBlur", scene, 1.0, camera
-        );
-        motionBlur.motionStrength = 0;
-        motionBlur.motionBlurSamples = 12;
-    } catch(e) { motionBlur = null; }
+    // Motion blur — Asphalt-style speed blur. Skipped on mobile (it samples
+    // a velocity texture every frame, which is expensive on small GPUs).
+    if (!isMobile) {
+        try {
+            motionBlur = new BABYLON.MotionBlurPostProcess(
+                "motionBlur", scene, 1.0, camera
+            );
+            motionBlur.motionStrength = 0;
+            motionBlur.motionBlurSamples = 8;
+        } catch(e) { motionBlur = null; }
+    } else {
+        motionBlur = null;
+    }
 
-    // Strong glow/bloom layer — neon bloom
-    glowLayer = new BABYLON.GlowLayer("glow", scene, {
-        mainTextureFixedSize: 512,
-        blurKernelSize: 64,
-    });
-    glowLayer.intensity = isNight ? 1.5 : 0.65;
+    // Glow/bloom — desktop only. The neon look is nice but the layer renders
+    // an extra blurred RT every frame, which is what kills phone GPUs.
+    if (!isMobile) {
+        glowLayer = new BABYLON.GlowLayer("glow", scene, {
+            mainTextureFixedSize: 512,
+            blurKernelSize: 40,
+        });
+        glowLayer.intensity = isNight ? 1.5 : 0.65;
+    } else {
+        glowLayer = null;
+    }
 
-    // Highlight layer for car paint shine
-    try {
-        highlightLayer = new BABYLON.HighlightLayer("hl", scene);
-        highlightLayer.blurHorizontalSize = 0.3;
-        highlightLayer.blurVerticalSize = 0.3;
-    } catch(e) { highlightLayer = null; }
+    // Highlight layer for car paint shine — skip on mobile entirely. It adds
+    // an extra full-screen pass for a subtle outline effect that's barely
+    // visible at typical phone screen size.
+    if (!isMobile) {
+        try {
+            highlightLayer = new BABYLON.HighlightLayer("hl", scene);
+            highlightLayer.blurHorizontalSize = 0.3;
+            highlightLayer.blurVerticalSize = 0.3;
+        } catch(e) { highlightLayer = null; }
+    } else {
+        highlightLayer = null;
+    }
 
     // Rich environment reflections
     try {
@@ -344,12 +375,15 @@ function initScene() {
     spawnNitroPickups(track);
 
     // ── Build player car ──
-    playerCar = buildCarMesh(GameState.selectedColor, CARS[GameState.selectedCar]);
+    playerCar = buildCarMesh(GameState.selectedColor, CARS[GameState.selectedCar], { isPlayer: true });
 
     // ── Build AI cars ──
     aiCars = [];
     const aiColors = ['#2266ff','#ff8800','#22cc44','#cc22cc','#cccc00','#00cccc','#ff4466'];
-    for (let i = 0; i < GameState.opponents; i++) {
+    // Cap opponents on mobile — each car is dozens of meshes plus a Draco
+    // GLB decode. Five at once was murdering phone GPUs.
+    const opponentCount = isMobile ? Math.min(GameState.opponents, 3) : GameState.opponents;
+    for (let i = 0; i < opponentCount; i++) {
         const aiColor = aiColors[i % aiColors.length];
         const aiCarIdx = Math.floor(Math.random() * CARS.length);
         const mesh = buildCarMesh(aiColor, CARS[Math.min(aiCarIdx, CARS.length - 1)]);

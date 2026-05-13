@@ -10,29 +10,9 @@
     <link rel="icon" type="image/png" href="models/menu-logo.png">
     <link rel="shortcut icon" type="image/png" href="models/menu-logo.png">
     <link rel="apple-touch-icon" href="models/menu-logo.png">
-    <script src="https://cdn.babylonjs.com/babylon.js"></script>
-    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <script src="https://cdn.babylonjs.com/v8.16.1/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/v8.16.1/loaders/babylonjs.loaders.min.js"></script>
     <script src="https://unpkg.com/earcut@2.2.4/dist/earcut.min.js"></script>
-    <script>
-        // Pre-warm the Draco WASM decoder. The GLB car models are
-        // Draco-compressed; Babylon lazy-fetches the decoder from cdn.babylonjs.com
-        // on first decode. On slow phones that fetch can stall, leaving every car
-        // as an empty TransformNode. Kick the fetch off here so it overlaps with
-        // login and menu rendering, not the first car spawn.
-        try {
-            if (window.BABYLON && BABYLON.DracoCompression) {
-                BABYLON.DracoCompression.Configuration = {
-                    decoder: {
-                        wasmUrl: 'https://cdn.babylonjs.com/draco_wasm_wrapper_gltf.js',
-                        wasmBinaryUrl: 'https://cdn.babylonjs.com/draco_decoder_gltf.wasm',
-                        fallbackUrl: 'https://cdn.babylonjs.com/draco_decoder_gltf.js',
-                    }
-                };
-                // Touching .Default triggers the lazy init + WASM fetch.
-                void BABYLON.DracoCompression.Default;
-            }
-        } catch(e) { console.warn('Draco prewarm failed', e); }
-    </script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;overflow:hidden;background:#0a0a1a;color:#fff}
@@ -678,19 +658,19 @@
 })();
 </script>
 <script>window.__V__='20260503f';</script>
-<script src="js/config.js?v=20260512c"></script>
-<script src="js/login.js?v=20260512c"></script>
-<script src="js/sound.js?v=20260512c"></script>
-<script src="js/scene.js?v=20260512c"></script>
-<script src="js/cars.js?v=20260512c"></script>
-<script src="js/track.js?v=20260512c"></script>
-<script src="js/effects.js?v=20260512c"></script>
-<script src="js/hud.js?v=20260512c"></script>
-<script src="js/physics.js?v=20260512c"></script>
-<script src="js/race.js?v=20260512c"></script>
-<script src="js/input.js?v=20260512c"></script>
-<script src="js/touch.js?v=20260512c"></script>
-<script src="js/preview.js?v=20260512c"></script>
+<script src="js/config.js?v=20260513d"></script>
+<script src="js/login.js?v=20260513d"></script>
+<script src="js/sound.js?v=20260513d"></script>
+<script src="js/scene.js?v=20260513d"></script>
+<script src="js/cars.js?v=20260513d"></script>
+<script src="js/track.js?v=20260513d"></script>
+<script src="js/effects.js?v=20260513d"></script>
+<script src="js/hud.js?v=20260513d"></script>
+<script src="js/physics.js?v=20260513d"></script>
+<script src="js/race.js?v=20260513d"></script>
+<script src="js/input.js?v=20260513d"></script>
+<script src="js/touch.js?v=20260513d"></script>
+<script src="js/preview.js?v=20260513d"></script>
 <!-- Hidden YouTube iframe — single background track that plays continuously
      across menus and races. -->
 <div id="menu-music-frame" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;pointer-events:none"></div>

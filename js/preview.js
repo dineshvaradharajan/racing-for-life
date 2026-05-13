@@ -11,6 +11,9 @@ let _previewBodyMaterials = [];
 let _previewRotation = 0;
 let _previewAccentLights = [];
 let _previewResizeWired = false;
+// Cache loaded preview cars by style — flip visibility instead of re-importing
+// every time the user clicks a different card. Each entry: { root, fitted }.
+const _previewCarCache = {};
 
 function initCarPreview() {
     const canvas = document.getElementById('car-preview-canvas');
@@ -23,6 +26,10 @@ function initCarPreview() {
             alpha: true,
             antialias: true,
         });
+        // Don't super-sample on Retina — Babylon's default would render the
+        // turntable at 2x resolution and downscale, doubling fragment work
+        // for a small preview pane no one is studying pixel-by-pixel.
+        _previewEngine.setHardwareScalingLevel(1);
         _previewScene = new BABYLON.Scene(_previewEngine);
         _previewScene.useRightHandedSystem = true;
         _previewScene.clearColor = new BABYLON.Color4(0.02, 0.02, 0.06, 1);
@@ -491,18 +498,65 @@ function updateCarPreview() {
         return;
     }
 
-    // Different car — rebuild
+    // Different car — hide the currently visible root (keep it cached for
+    // when the user clicks back), then either show a cached root for the
+    // new style or build a fresh one.
     if (_previewCarRoot) {
-        _previewCarRoot.getChildMeshes(false).forEach(m => { try { m.dispose(); } catch(e) {} });
-        try { _previewCarRoot.dispose(); } catch(e) {}
+        try { _previewCarRoot.setEnabled(false); } catch(e) {}
         _previewCarRoot = null;
     }
     _previewBodyMaterials = [];
 
-    _previewCarRoot = _loadPreviewCar(style, color);
+    const cached = _previewCarCache[style];
+    if (cached && cached.root && !cached.root.isDisposed()) {
+        _previewCarRoot = cached.root;
+        _previewBodyMaterials = cached.bodyMaterials || [];
+        try { cached.root.setEnabled(true); } catch(e) {}
+        _retintPreviewCar(color);
+        // Re-snap rings under this car's bottom (other cars may have moved them).
+        if (cached.fitted) _previewSnapRings(cached.root);
+    } else {
+        _previewCarRoot = _loadPreviewCar(style, color);
+        if (_previewCarRoot) {
+            _previewCarCache[style] = { root: _previewCarRoot, bodyMaterials: _previewBodyMaterials, fitted: false };
+        }
+    }
     _previewRotation = 0;
     _previewLoadedStyle = style;
     _previewLoadedColor = color;
+}
+
+// Snap the turntable rings + camera target under a fitted car. Used both
+// during initial fit and when the user clicks back to a previously-cached car
+// (other cars may have moved the rings to their own bottom Y).
+function _previewSnapRings(root) {
+    if (!root || !_previewScene) return;
+    let min = null, max = null;
+    const visit = (n) => {
+        if (n && n.getClassName && n.getClassName() !== 'TransformNode'
+            && n.getBoundingInfo && n.isEnabled && n.isEnabled()) {
+            n.computeWorldMatrix(true);
+            const bb = n.getBoundingInfo().boundingBox;
+            const lo = bb.minimumWorld, hi = bb.maximumWorld;
+            const dx = hi.x - lo.x, dy = hi.y - lo.y, dz = hi.z - lo.z;
+            if (dx >= 0.0001 || dy >= 0.0001 || dz >= 0.0001) {
+                if (!min) { min = lo.clone(); max = hi.clone(); }
+                else { min.minimizeInPlace(lo); max.maximizeInPlace(hi); }
+            }
+        }
+        if (n && n.getChildren) n.getChildren().forEach(visit);
+    };
+    visit(root);
+    if (!min) return;
+    const carBottomY = min.y;
+    const carCenterY = (min.y + max.y) / 2;
+    const floor = _previewScene.getMeshByName('pfloor');
+    const ring  = _previewScene.getMeshByName('pring');
+    const ring2 = _previewScene.getMeshByName('pring2');
+    if (floor) floor.position.y = carBottomY - 0.001;
+    if (ring)  ring.position.y  = carBottomY;
+    if (ring2) ring2.position.y = carBottomY;
+    if (_previewCamera) _previewCamera.target = new BABYLON.Vector3(0, carCenterY, 0);
 }
 
 // Robust fit: walks every AbstractMesh under root, collects valid world
@@ -625,6 +679,13 @@ function _previewFitToTurntable(root, label) {
 
     console.log('[preview] fit', label, 'native=', s1.toFixed(2), 'factor=', factor.toFixed(3));
 
+    // Record fit completion + current body materials so the cache layer
+    // can skip refitting on re-show and retint correctly.
+    if (_previewLoadedStyle && _previewCarCache[_previewLoadedStyle]) {
+        _previewCarCache[_previewLoadedStyle].fitted = true;
+        _previewCarCache[_previewLoadedStyle].bodyMaterials = _previewBodyMaterials.slice();
+    }
+
     // Capture a thumbnail of this car for the strip cards. Schedule a few
     // frames out so the scene has time to render with materials/lighting
     // settled. Cache by style so we only do it once per car.
@@ -682,6 +743,8 @@ function disposeCarPreview() {
     _previewLoadedColor = null;
     _previewAccentLights = [];
     _previewBodyMaterials = [];
+    // Scene was disposed — every cached root is now invalid.
+    for (const k of Object.keys(_previewCarCache)) delete _previewCarCache[k];
 }
 
 // ============================================================

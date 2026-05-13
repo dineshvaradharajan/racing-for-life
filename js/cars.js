@@ -19,7 +19,7 @@ const CAR_MODELS = {
     'ferrarif1':  { file: 'models/ferrari-f1-2019.glb',  targetLen: 3.2, yOffset: 0, rotationY: 0 },
     'koenigsegg': { file: 'models/koenigsegg-ccx.glb',   targetLen: 3.2, yOffset: 0, rotationY: 0 },
     'jesko':      { file: 'models/koenigsegg-jesko.glb', targetLen: 3.2, yOffset: 0, rotationY: 0 },
-    'gt':         { file: 'models/lambo-terzo.glb',      targetLen: 3.2, yOffset: 0, rotationY: 0 },
+    'gt':         { file: 'models/inferno-gt.glb',       targetLen: 3.2, yOffset: 0, rotationY: 0 },
     'supra4':     { file: 'models/toyota-supra-mk4.glb', targetLen: 3.2, yOffset: 0, rotationY: 0 },
     'supra5':     { file: 'models/toyota-supra-mk5.glb', targetLen: 3.2, yOffset: 0, rotationY: 0 },
     'bugatti':    { file: 'models/bugatti-chiron.glb',   targetLen: 3.2, yOffset: 0, rotationY: 0 },
@@ -1487,30 +1487,45 @@ function _buildGeneric(group, mats, W, H, L, wR, sc) {
 //  MAIN ENTRY POINTS
 // ============================================================
 
-function buildCarMesh(color, carDef) {
+function buildCarMesh(color, carDef, opts) {
+    const isPlayer = !!(opts && opts.isPlayer);
     const style = carDef.style || 'lambo';
     const group = new BABYLON.TransformNode(uid('car'), scene);
     group.wheels = [];
 
-    // Try to load GLB model
     if (CAR_MODELS[style]) {
+        // Procedural-first ONLY for the player. AIs popping in a beat late
+        // is barely noticeable, while building procedural meshes for 5+ AIs
+        // synchronously at race start was visibly stalling the first frames.
+        let proceduralNodes = null;
+        let proceduralWheels = null;
+        if (isPlayer) {
+            buildProceduralCar(group, color, carDef);
+            proceduralNodes = group.getDescendants(false);
+            proceduralWheels = group.wheels;
+        }
+
         let settled = false;
-        // Watchdog: on slow phones the Draco WASM decoder fetch (lazy-loaded
-        // by Babylon's glTF loader) can stall without ever firing the error
-        // callback. Without a timeout the car stays an empty TransformNode
-        // and nothing ever shows up on track. Force the procedural fallback
-        // if the GLB hasn't resolved in time.
         const watchdog = setTimeout(() => {
             if (settled) return;
             settled = true;
-            console.warn('[cars] GLB watchdog tripped for', style, '— using procedural fallback');
-            buildProceduralCar(group, color, carDef);
+            if (!isPlayer) {
+                // No procedural placeholder, GLB never came — build now
+                buildProceduralCar(group, color, carDef);
+            } else {
+                console.warn('[cars] GLB watchdog tripped for', style, '— keeping procedural');
+            }
         }, 8000);
+
         loadCarModel(style, color, group, function(result) {
             if (settled) return;
             settled = true;
             clearTimeout(watchdog);
-            if (!result) {
+            if (result && proceduralNodes) {
+                proceduralNodes.forEach(n => { try { n.dispose(); } catch(e) {} });
+                if (group.wheels === proceduralWheels) group.wheels = [];
+            } else if (!result && !proceduralNodes) {
+                // GLB load reported failure and we have no placeholder yet
                 buildProceduralCar(group, color, carDef);
             }
         });
